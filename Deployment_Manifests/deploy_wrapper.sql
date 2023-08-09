@@ -1,0 +1,7 @@
+SET DEFINE ON
+COLUMN CURRENT_SCHEMA       new_value CURRENT_SCHEMA      
+
+SELECT sys_context('USERENV','CURRENT_SCHEMA') AS CURRENT_SCHEMA FROM DUAL;
+
+@./_Drop_All_Objects_In_arg1.sql "&&CURRENT_SCHEMA"
+@./deploy.core.sql "&&CURRENT_SCHEMA"

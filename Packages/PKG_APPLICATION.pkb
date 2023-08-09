@@ -137,6 +137,9 @@ BEGIN
               ( application_name, version, deploy_commit_hash )
          VALUES 
               ( ip_application_name, ip_version, ip_deploy_commit_hash );
+
+         get_application_rec_p( ip_application_name => ip_application_name
+                              , op_rec_application  => rec_application );
       ELSE
          assert(rec_application.deploy_status != c_deploy_status_complete, 'Initial application deployment already marked complete');
          assert(rec_application.deploy_status IN (c_deploy_status_running, c_deploy_status_fail), 'Application record exists; deploy_status must be one of: '||c_deploy_status_running||','||c_deploy_status_fail||'; found: '||rec_application.deploy_status);

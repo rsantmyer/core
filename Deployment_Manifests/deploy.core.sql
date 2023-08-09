@@ -99,8 +99,11 @@ EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', i
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_APP_DICT'  , ip_object_type => pkg_application.c_object_type_package_body);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_TRACE'  , ip_object_type => pkg_application.c_object_type_package);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_TRACE'  , ip_object_type => pkg_application.c_object_type_package_body);
+--SYS PRIVS
+EXEC pkg_application.add_sys_priv_p(ip_application_name => '&&APPLICATION_NAME', ip_privilege => 'SELECT ANY DICTIONARY');
 --
 EXEC pkg_application.validate_objects_p(ip_application_name => '&&APPLICATION_NAME');
+EXEC pkg_application.validate_sys_privs_p(ip_application_name => '&&APPLICATION_NAME');
 --
 EXEC pkg_application.set_deployment_complete_p(ip_application_name => '&&APPLICATION_NAME');
 
