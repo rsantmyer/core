@@ -38,6 +38,7 @@ END get_val_f;
 PROCEDURE add_val_p( ip_application IN app_dictionary.application_name%TYPE
                    , ip_key IN app_dictionary.key%TYPE
                    , ip_value IN app_dictionary.value%TYPE
+                   , ip_note IN app_dictionary.note%TYPE DEFAULT NULL
                    )
 IS
 BEGIN
@@ -45,11 +46,13 @@ BEGIN
      INTO app_dictionary
         ( application_name
         , key
-        , value )
+        , value 
+        , note )
    VALUES
         ( ip_application
         , UPPER(ip_key)
-        , ip_value );
+        , ip_value 
+        , ip_note );
 
    COMMIT;
 END add_val_p;
