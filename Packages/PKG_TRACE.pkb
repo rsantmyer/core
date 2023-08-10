@@ -59,7 +59,7 @@ BEGIN
                ELSE 0 
           END AS time_waited_micro
         , CASE WHEN ip_get_load NOT IN ('N','n') THEN
-                 ( SELECT VALUE FROM V$OSSTAT WHERE STAT_NAME = 'LOAD' )
+                 NULL --( SELECT VALUE FROM V$OSSTAT WHERE STAT_NAME = 'LOAD' ) -- IF USER HAS SELECT ON V$OSSTAT, UNCOMMENT THE LINE
                ELSE NULL 
           END AS load
         , ip_context AS context

@@ -7,14 +7,8 @@ SPOOL deploy.&&APPLICATION_NAME..&1..log
 --PRINT BIND VARIABLE VALUES
 SET AUTOPRINT ON                    
 
---THE START COMMAND WILL LIST EACH COMMAND IN A SCRIPT
-REM SET ECHO ON                         
-
 --DISPLAY DBMS_OUTPUT.PUT_LINE OUTPUT
 SET SERVEROUTPUT ON                 
-
---SHOW THE OLD AND NEW SETTINGS OF A SQLPLUS SYSTEM VARIABLE
-REM SET SHOWMODE ON                     
 
 --ALLOW BLANK LINES WITHIN A SQL COMMAND OR SCRIPT
 --SET SQLBLANKLINES ON                
@@ -100,7 +94,7 @@ EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', i
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_TRACE'  , ip_object_type => pkg_application.c_object_type_package);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_TRACE'  , ip_object_type => pkg_application.c_object_type_package_body);
 --SYS PRIVS
-EXEC pkg_application.add_sys_priv_p(ip_application_name => '&&APPLICATION_NAME', ip_privilege => 'SELECT ANY DICTIONARY');
+--EXEC pkg_application.add_sys_priv_p(ip_application_name => '&&APPLICATION_NAME', ip_privilege => 'SELECT ANY DICTIONARY');
 --
 EXEC pkg_application.validate_objects_p(ip_application_name => '&&APPLICATION_NAME');
 EXEC pkg_application.validate_sys_privs_p(ip_application_name => '&&APPLICATION_NAME');
