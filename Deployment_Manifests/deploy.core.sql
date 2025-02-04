@@ -1,6 +1,8 @@
 SET DEFINE ON
 DEFINE APPLICATION_NAME = 'CORE'
-DEFINE DEPLOY_VERSION = '1.21'
+DEFINE DEPLOY_VERSION_MAJOR = '2'
+DEFINE DEPLOY_VERSION_MINOR = '0'
+DEFINE DEPLOY_VERSION_PATCH = '0'
 
 SPOOL deploy.&&APPLICATION_NAME..&1..log
 
@@ -64,7 +66,7 @@ Prompt Deploying Metadata
 
 --since we just created them, let's do begin and end deployment here, so it is tracked.
 SET DEFINE ON
-EXEC pkg_application.begin_deployment_p(ip_application_name => '&&APPLICATION_NAME', ip_version => &&DEPLOY_VERSION, ip_deployment_type => pkg_application.c_deploy_type_initial);
+EXEC pkg_application.begin_deployment_p(ip_application_name => '&&APPLICATION_NAME', ip_major_version => &&DEPLOY_VERSION_MAJOR, ip_minor_version => &&DEPLOY_VERSION_MINOR, ip_patch_version => &&DEPLOY_VERSION_PATCH, ip_deployment_type => pkg_application.c_deploy_type_initial);
 --SEQUENCES
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'LOG_UID_SEQ'      , ip_object_type => pkg_application.c_object_type_sequence);
 --TABLES

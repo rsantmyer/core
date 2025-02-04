@@ -20,14 +20,32 @@ AS
 --   EXEC pkg_application.set_deployment_complete_p(ip_application_name => ':APPLICATION_NAME:');
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+   TYPE t_application IS RECORD
+   ( application_name           application.application_name%TYPE
+   , major_version              application.major_version%TYPE    := 0
+   , minor_version              application.minor_version%TYPE    := 1
+   , patch_version              application.patch_version%TYPE    := 0
+   , pre_release                application.pre_release%TYPE
+   , build                      application.build%TYPE  
+   , deploy_type                application.deploy_type%TYPE
+   , deploy_status              application.deploy_status%TYPE
+   , deploy_commit_hash         application.deploy_commit_hash%TYPE
+   , deploy_begin               application.deploy_begin%TYPE
+   , deploy_end                 application.deploy_end%TYPE 
+   )
+   ;
 --------------------------------------------------------------------------------
    --PACKAGE CONSTANTS
    --
    --APPLICATION.version
-   c_core_version             CONSTANT APPLICATION.version%TYPE     := 1.1;
-   c_version_default          CONSTANT APPLICATION.version%TYPE     := 0.1;
+   c_core_major_version       CONSTANT APPLICATION.major_version%TYPE     := 2;
+   c_version_default_major    CONSTANT APPLICATION.major_version%TYPE     := 0;
+   c_version_default_minor    CONSTANT APPLICATION.minor_version%TYPE     := 1;
+   c_version_default_patch    CONSTANT APPLICATION.patch_version%TYPE     := 0;
    --APPLICATION.deploy_type
    c_deploy_type_initial      CONSTANT APPLICATION.deploy_type%TYPE := 'I';
+   c_deploy_type_major        CONSTANT APPLICATION.deploy_type%TYPE := 'V';
+   c_deploy_type_minor        CONSTANT APPLICATION.deploy_type%TYPE := 'M';
    c_deploy_type_patch        CONSTANT APPLICATION.deploy_type%TYPE := 'P';
    --APPLICATION.deploy_commit_hash
    c_deploy_commit_hash_unknown CONSTANT APPLICATION.deploy_commit_hash%TYPE := '0000000000000000000000000000000000000000';
@@ -58,16 +76,23 @@ AS
    
    --PROCEDURES
    --check that application version is at least ip_min_version
-   PROCEDURE check_min_app_version_p( ip_application_name IN application.application_name%TYPE
-                                    , ip_min_version      IN application.version%TYPE );
+   PROCEDURE check_min_app_version_p( ip_application_name  IN application.application_name%TYPE
+                                    , ip_min_major_version IN application.major_version%TYPE DEFAULT 0
+                                    , ip_min_minor_version IN application.minor_version%TYPE DEFAULT 0
+                                    , ip_min_patch_version IN application.patch_version%TYPE DEFAULT 0
+                                    );
 
    --check that application version is less than ip_version
-   PROCEDURE check_already_deployed_p( ip_application_name IN application.application_name%TYPE
-                                     , ip_version          IN application.version%TYPE );
+   PROCEDURE check_already_deployed_p( ip_application_name  IN application.application_name%TYPE
+                                     , ip_min_major_version IN application.major_version%TYPE DEFAULT 0
+                                     , ip_min_minor_version IN application.minor_version%TYPE DEFAULT 0
+                                     , ip_min_patch_version IN application.patch_version%TYPE DEFAULT 0 );
 
-   PROCEDURE begin_deployment_p( ip_application_name IN application.application_name%TYPE
-                               , ip_version          IN application.version%TYPE     DEFAULT c_version_default
-                               , ip_deployment_type  IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
+   PROCEDURE begin_deployment_p( ip_application_name   IN application.application_name%TYPE
+                               , ip_major_version      IN application.major_version%TYPE
+                               , ip_minor_version      IN application.minor_version%TYPE
+                               , ip_patch_version      IN application.patch_version%TYPE
+                               , ip_deployment_type    IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
                                , ip_deploy_commit_hash IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
                                );
    --

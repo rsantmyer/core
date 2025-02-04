@@ -28,7 +28,9 @@ BEGIN
      INTO app_deploy_hist
         ( log_ts
         , application_name
-        , version
+        , major_version
+        , minor_version
+        , patch_version
         , deploy_type
         , deploy_status
         , deploy_begin
@@ -37,7 +39,9 @@ BEGIN
         )
    SELECT SYSDATE
         , ip_rec_application.application_name
-        , ip_rec_application.version
+        , ip_rec_application.major_version
+        , ip_rec_application.minor_version
+        , ip_rec_application.patch_version
         , ip_rec_application.deploy_type
         , ip_rec_application.deploy_status
         , ip_rec_application.deploy_begin
@@ -77,8 +81,11 @@ END get_object_p;
 
 
 --PUBLIC
-PROCEDURE check_min_app_version_p( ip_application_name IN application.application_name%TYPE
-                                 , ip_min_version      IN application.version%TYPE )
+PROCEDURE check_min_app_version_p( ip_application_name  IN application.application_name%TYPE
+                                 , ip_min_major_version IN application.major_version%TYPE DEFAULT 0
+                                 , ip_min_minor_version IN application.minor_version%TYPE DEFAULT 0
+                                 , ip_min_patch_version IN application.patch_version%TYPE DEFAULT 0
+                                 )
 IS
    rec_application application%ROWTYPE;
 BEGIN
@@ -87,13 +94,22 @@ BEGIN
      FROM application
     WHERE application_name = UPPER(ip_application_name);
 
-   assert(rec_application.version >= NVL(ip_min_version,0), 'Application version is: '||rec_application.version||'. Minimum required version is: '||ip_min_version);
+--   assert(rec_application.version >= NVL(ip_min_version,0), 'Application version is: '||rec_application.version||'. Minimum required version is: '||ip_min_version);
+   assert(rec_application.major_version >= NVL(ip_min_major_version,0), 'Application major_version is: '||rec_application.major_version||'. Minimum required major_version is: '||ip_min_major_version);
+   IF rec_application.major_version = ip_min_major_version THEN
+      assert(rec_application.minor_version >= NVL(ip_min_minor_version,0), 'Application minor_version is: '||rec_application.minor_version||'. Minimum required minor_version is: '||ip_min_minor_version);
+      IF rec_application.minor_version = ip_min_minor_version THEN
+         assert(rec_application.patch_version >= NVL(ip_min_patch_version,0), 'Application patch_version is: '||rec_application.patch_version||'. Minimum required patch_version is: '||ip_min_patch_version);
+     END IF;
+   END IF;
 END check_min_app_version_p;
 
 
 
-PROCEDURE check_already_deployed_p( ip_application_name IN application.application_name%TYPE
-                                  , ip_version          IN application.version%TYPE )
+PROCEDURE check_already_deployed_p( ip_application_name  IN application.application_name%TYPE
+                                  , ip_min_major_version IN application.major_version%TYPE DEFAULT 0
+                                  , ip_min_minor_version IN application.minor_version%TYPE DEFAULT 0
+                                  , ip_min_patch_version IN application.patch_version%TYPE DEFAULT 0 )
 IS
    rec_application application%ROWTYPE;
 BEGIN
@@ -102,23 +118,30 @@ BEGIN
      FROM application
     WHERE application_name = UPPER(ip_application_name);
 
-   assert(rec_application.version < NVL(ip_version,0), 'It appears '||ip_version||' has already been deployed; application version is: '||rec_application.version);
+   assert(rec_application.major_version <= NVL(ip_min_major_version,0), 'It appears major_version '||ip_min_major_version||' has already been deployed; application major_version is: '||rec_application.major_version);
+   IF rec_application.major_version = ip_min_major_version THEN
+      assert(rec_application.minor_version <= NVL(ip_min_minor_version,0), 'It appears minor_version '||ip_min_minor_version||' has already been deployed; application minor_version is: '||rec_application.minor_version);
+      IF rec_application.minor_version = ip_min_minor_version THEN
+         assert(rec_application.patch_version <  NVL(ip_min_minor_version,0), 'It appears patch_version '||ip_min_patch_version||' has already been deployed; application patch_version is: '||rec_application.patch_version);
+      END IF;
+   END IF;
 END check_already_deployed_p;
 
 
 
-PROCEDURE begin_deployment_p( ip_application_name IN application.application_name%TYPE
-                            , ip_version          IN application.version%TYPE     DEFAULT c_version_default
-                            , ip_deployment_type  IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
+PROCEDURE begin_deployment_p( ip_application_name   IN application.application_name%TYPE
+                            , ip_major_version      IN application.major_version%TYPE
+                            , ip_minor_version      IN application.minor_version%TYPE
+                            , ip_patch_version      IN application.patch_version%TYPE
+                            , ip_deployment_type    IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
                             , ip_deploy_commit_hash IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
                             )
 IS
-   rec_application   application%ROWTYPE;
-   l_exists          BOOLEAN := FALSE;
+   rec_application         application%ROWTYPE;
+   l_exists                BOOLEAN := FALSE;
+   l_restart_failed_deploy BOOLEAN := FALSE;
 BEGIN
    assert(ip_application_name = UPPER(ip_application_name));
-   assert(ip_version > 0);
-   assert(ip_deployment_type IN (c_deploy_type_initial, c_deploy_type_patch));
    
    CASE ip_deployment_type
    WHEN c_deploy_type_initial THEN
@@ -134,16 +157,22 @@ BEGIN
       IF l_exists = FALSE THEN
          INSERT 
            INTO application 
-              ( application_name, version, deploy_commit_hash )
+              ( application_name, major_version , minor_version, patch_version, deploy_commit_hash )
          VALUES 
-              ( ip_application_name, ip_version, ip_deploy_commit_hash );
+              ( ip_application_name, ip_major_version, ip_minor_version, ip_patch_version, ip_deploy_commit_hash );
 
          get_application_rec_p( ip_application_name => ip_application_name
                               , op_rec_application  => rec_application );
       ELSE
          assert(rec_application.deploy_status != c_deploy_status_complete, 'Initial application deployment already marked complete');
          assert(rec_application.deploy_status IN (c_deploy_status_running, c_deploy_status_fail), 'Application record exists; deploy_status must be one of: '||c_deploy_status_running||','||c_deploy_status_fail||'; found: '||rec_application.deploy_status);
-         assert(rec_application.version = ip_version, 'Application record exists; version must match ip_version');
+
+         assert(    ip_major_version = rec_application.major_version 
+               AND ip_minor_version = rec_application.minor_version 
+               AND ip_patch_version = rec_application.patch_version 
+               , 'Application record exists; version must match: '
+               ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
+
          assert(rec_application.deploy_type = c_deploy_type_initial, 'Application record exists; deploy_type must be c_deploy_type_initial');
       
          IF rec_application.deploy_status = c_deploy_status_fail THEN
@@ -153,26 +182,61 @@ BEGIN
                  , deploy_begin = SYSDATE;
          END IF;
       END IF;
-   WHEN c_deploy_type_patch THEN
+   ELSE --not initial deploy 
       get_application_rec_p( ip_application_name => ip_application_name
                            , op_rec_application  => rec_application );
-      
+
       IF rec_application.deploy_status IN (c_deploy_status_running, c_deploy_status_fail) THEN
-         assert(ip_version = rec_application.version, 'deployment already in-progress; ip_version must equal in-flight deployment version: '||rec_application.version);
-      ELSE
-         assert(ip_version >= rec_application.version, 'ip_version must be greater than deployed version; deployed: '||rec_application.version);
+         assert(    ip_major_version = rec_application.major_version 
+                AND ip_minor_version = rec_application.minor_version 
+                AND ip_patch_version = rec_application.patch_version 
+               , 'deployment already in-progress; version must equal in-flight deployment version: '
+               ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
+         l_restart_failed_deploy := TRUE;
       END IF;
+
+      CASE ip_deployment_type
+      WHEN c_deploy_type_major THEN
+         IF l_restart_failed_deploy = FALSE THEN
+            assert( ip_major_version > rec_application.major_version 
+                  , 'major version must be greater than deployed major version; deployed version is: '
+                  ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
+         END IF;
+      WHEN c_deploy_type_minor THEN
+         IF l_restart_failed_deploy = FALSE THEN
+            assert(    ip_major_version = rec_application.major_version 
+                  , 'Major version must match that already deployed; deployed version is: '
+                  ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
+
+            assert( ip_minor_version > rec_application.minor_version 
+                  , 'minor version must be greater than deployed minor version; deployed version is: '
+                  ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
+         END IF;
+      WHEN c_deploy_type_patch THEN
+         IF l_restart_failed_deploy = FALSE THEN
+            assert(    ip_major_version = rec_application.major_version 
+                   AND ip_minor_version = rec_application.minor_version
+                  , 'Major and Minor version must match those already deployed; deployed version is: '
+                  ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
+
+            assert( ip_patch_version > rec_application.patch_version 
+                  , 'patch version must be greater than deployed patch version; deployed version is: '
+                  ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
+         END IF;
+      ELSE
+         assert(FALSE, 'logic error: ip_deployment_type = '||ip_deployment_type);
+      END CASE;
       
       UPDATE application
-         SET version = ip_version
+         SET major_version = ip_major_version
+           , minor_version = ip_minor_version
+           , patch_version = ip_patch_version
            , deploy_type = ip_deployment_type
            , deploy_status = c_deploy_status_running
            , deploy_commit_hash = ip_deploy_commit_hash
            , deploy_begin = SYSDATE
            , deploy_end = NULL
        WHERE application_name = ip_application_name;
-   ELSE
-      assert(FALSE, 'logic error: ip_deployment_type = '||ip_deployment_type);
    END CASE;
 
    arch_application_rec_P( ip_rec_application => rec_application );
@@ -271,7 +335,8 @@ BEGIN
       SET is_valid         = CASE ( SELECT COUNT(*) 
                                       FROM application 
                                      WHERE application.application_name = app_dependency.depends_on
-                                       AND application.version BETWEEN app_dependency.version_min AND app_dependency.version_max
+                                       AND application.major_version BETWEEN TRUNC(app_dependency.version_min)
+                                                                         AND TRUNC(app_dependency.version_max)  --BUGBUG - NEED TO LOOK AT minor_version ALSO
                                   ) WHEN 0 THEN c_valid_no ELSE c_valid_yes END
         , last_validated   = SYSDATE
     WHERE application_name = ip_application_name;
@@ -463,14 +528,16 @@ BEGIN
            , object_type
            , object_namespace
            , object_name
-           , version
+           , major_version
+           , minor_version
            )
       VALUES 
            ( ip_application_name
            , rec_app_object_type.object_type
            , rec_app_object_type.object_namespace
            , ip_object_name
-           , rec_application.version
+           , rec_application.major_version
+           , rec_application.minor_version
            );
    EXCEPTION
       WHEN DUP_VAL_ON_INDEX THEN 
