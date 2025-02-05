@@ -74,6 +74,10 @@ AS
    c_object_type_db_link      CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'DATABASE LINK';
    c_object_type_synonym      CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'SYNONYM';
    
+   --FUNCTIONS
+   FUNCTION get_current_version_f( ip_application_name IN application.application_name%TYPE )
+      RETURN VARCHAR;
+
    --PROCEDURES
    --check that application version is at least ip_min_version
    PROCEDURE check_min_app_version_p( ip_application_name  IN application.application_name%TYPE
@@ -95,6 +99,9 @@ AS
                                , ip_deployment_type    IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
                                , ip_deploy_commit_hash IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
                                );
+   --
+   PROCEDURE set_deploy_notes_p( ip_application_name IN application.application_name%TYPE
+                               , ip_notes            IN app_deploy_notes.notes%TYPE);
    --
    PROCEDURE set_deployment_complete_p( ip_application_name IN application.application_name%TYPE);
    --

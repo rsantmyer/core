@@ -1,7 +1,7 @@
 SET DEFINE ON
 DEFINE APPLICATION_NAME = 'CORE'
 DEFINE DEPLOY_VERSION_MAJOR = '2'
-DEFINE DEPLOY_VERSION_MINOR = '0'
+DEFINE DEPLOY_VERSION_MINOR = '1'
 DEFINE DEPLOY_VERSION_PATCH = '0'
 
 SPOOL deploy.&&APPLICATION_NAME..&1..log
@@ -27,6 +27,7 @@ Prompt Creating Tables
 @@../Tables/ERROR_LOG.sql
 @@../Tables/APP_OBJ_NAMESPACE.sql
 @@../Tables/APPLICATION.sql
+@@../Tables/APP_DEPLOY_NOTES.sql --Depends on: APPLICATION
 @@../Tables/APP_DEPENDENCY.sql   --Depends on: APPLICATION
 @@../Tables/APP_OBJECT_TYPE.sql  --Depends on: APP_OBJ_NAMESPACE
 @@../Tables/APP_OBJECTS.sql      --Depends on: APPLICATION, APP_OBJECT_TYPE
@@ -71,6 +72,7 @@ EXEC pkg_application.begin_deployment_p(ip_application_name => '&&APPLICATION_NA
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'LOG_UID_SEQ'      , ip_object_type => pkg_application.c_object_type_sequence);
 --TABLES
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPENDENCY'   , ip_object_type => pkg_application.c_object_type_table);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPLOY_NOTES' , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_OBJ_NAMESPACE', ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_OBJ_PRIVS'    , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_OBJECT_TYPE'  , ip_object_type => pkg_application.c_object_type_table);
@@ -101,6 +103,21 @@ EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', i
 EXEC pkg_application.validate_objects_p(ip_application_name => '&&APPLICATION_NAME');
 EXEC pkg_application.validate_sys_privs_p(ip_application_name => '&&APPLICATION_NAME');
 --
+BEGIN
+   pkg_application.set_deploy_notes_p
+   ( ip_application_name => '&&APPLICATION_NAME'
+   , ip_notes => 
+Q'{2.1.0:
+* Add the table APP_DEPLOY_NOTES
+* Add pkg_application.get_current_version_f
+* Add pkg_application.set_deploy_notes_p
+--
+2.0.0:
+* Add support for semantic versioning (major, minor, patch)
+}'
+   );
+END;
+/
 EXEC pkg_application.set_deployment_complete_p(ip_application_name => '&&APPLICATION_NAME');
 
 SPOOL OFF

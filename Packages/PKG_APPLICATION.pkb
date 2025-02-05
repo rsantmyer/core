@@ -81,6 +81,21 @@ END get_object_p;
 
 
 --PUBLIC
+FUNCTION get_current_version_f( ip_application_name IN application.application_name%TYPE )
+   RETURN VARCHAR
+IS 
+   l_retvar VARCHAR(100);
+BEGIN
+   SELECT major_version||'.'||minor_version||'.'||patch_version AS sem_ver
+     INTO l_retvar
+     FROM application
+    WHERE application_name = ip_application_name;
+   
+   RETURN l_retvar;
+END get_current_version_f;
+
+
+
 PROCEDURE check_min_app_version_p( ip_application_name  IN application.application_name%TYPE
                                  , ip_min_major_version IN application.major_version%TYPE DEFAULT 0
                                  , ip_min_minor_version IN application.minor_version%TYPE DEFAULT 0
@@ -243,6 +258,48 @@ BEGIN
 
    COMMIT;
 END begin_deployment_p;
+
+
+
+PROCEDURE set_deploy_notes_p( ip_application_name IN application.application_name%TYPE
+                            , ip_notes            IN app_deploy_notes.notes%TYPE)
+IS
+   rec_application   application%ROWTYPE;
+BEGIN
+   assert(ip_application_name = UPPER(ip_application_name));
+   
+   get_application_rec_p( ip_application_name => ip_application_name
+                        , op_rec_application  => rec_application );
+
+   assert(rec_application.deploy_status IN (c_deploy_status_running), 'Deploy status must be "'||c_deploy_status_running||'" in order to set deploy notes');
+
+   DELETE 
+     FROM app_deploy_notes
+    WHERE application_name = ip_application_name
+      AND major_version = rec_application.major_version
+      AND minor_version = rec_application.minor_version
+      AND patch_version = rec_application.patch_version
+   ;
+   INSERT 
+     INTO app_deploy_notes
+        ( application_name
+        , major_version
+        , minor_version
+        , patch_version
+        , note_ts
+        , notes
+        )
+   VALUES
+        ( ip_application_name
+        , rec_application.major_version
+        , rec_application.minor_version
+        , rec_application.patch_version
+        , SYSDATE
+        , ip_notes
+        )
+   ;
+   COMMIT;
+END set_deploy_notes_p;
 
 
 
