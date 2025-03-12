@@ -813,6 +813,7 @@ BEGIN
          AND object_namespace = rec_app_object.object_namespace;
    END LOOP;
    
+   DELETE FROM app_dictionary WHERE application_name = ip_application_name;
    DELETE FROM application WHERE application_name = ip_application_name;
    
    COMMIT;
