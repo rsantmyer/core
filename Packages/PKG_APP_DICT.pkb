@@ -62,6 +62,7 @@ END add_val_p;
 PROCEDURE merge_val_p( ip_application IN app_dictionary.application_name%TYPE
                      , ip_key IN app_dictionary.key%TYPE
                      , ip_value IN app_dictionary.value%TYPE
+                     , ip_note IN app_dictionary.note%TYPE DEFAULT NULL
                      )
 IS
 BEGIN
@@ -70,7 +71,7 @@ BEGIN
     WHERE application_name = ip_application
       AND key = UPPER(ip_key);
 
-   add_val_p( ip_application, ip_key, ip_value );
+   add_val_p( ip_application, ip_key, ip_value, ip_note );
 END merge_val_p;
 
 
