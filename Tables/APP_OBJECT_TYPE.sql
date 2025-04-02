@@ -67,4 +67,4 @@ Oracle (as of 12c) defines the following object types:
   XML SCHEMA
 }';
 
-COMMENT ON COLUMN APP_OBJECT_TYPE.SUPPORTED IS 'Is the object type supported by the application? Y:Yes, N:No.'
+COMMENT ON COLUMN APP_OBJECT_TYPE.SUPPORTED IS 'Is the object type supported by the application? Y:Yes, N:No.';
