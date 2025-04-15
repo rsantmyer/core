@@ -13,7 +13,8 @@ BEGIN
 
    FOR REC 
     IN (SELECT *
-          FROM USER_OBJECTS )
+          FROM USER_OBJECTS
+		 WHERE generated != 'Y' )
    LOOP
       CASE REC.OBJECT_TYPE
       WHEN 'SEQUENCE' THEN
