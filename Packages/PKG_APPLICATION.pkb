@@ -607,49 +607,121 @@ END add_object_p;
 
 
 
-PROCEDURE add_object_metadata_p( ip_object_name      IN app_objects.object_name%TYPE
-                               , ip_object_type      IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
-                               , ip_discriminator    IN app_object_metadata.discriminator%TYPE DEFAULT 'NONE'
-                               , ip_key              IN app_object_metadata.key%TYPE DEFAULT 'VERSION'
-                               , ip_value            IN app_object_metadata.metadata_value%TYPE
+PROCEDURE add_object_metadata_p( ip_application_name  IN application.application_name%TYPE
+                               , ip_object_name       IN app_objects.object_name%TYPE
+                               , ip_object_type       IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
+                               , ip_discriminator_col IN app_object_metadata.discriminator_col%TYPE DEFAULT 'NONE'
+                               , ip_discriminator_val IN app_object_metadata.discriminator_val%TYPE DEFAULT 'NONE'
+                               , ip_version           IN app_object_metadata.version%TYPE DEFAULT NULL
+                               , ip_dml_override_proc IN app_object_metadata.dml_override_proc%TYPE DEFAULT NULL
                                )
 IS
-   PRAGMA AUTONOMOUS_TRANSACTION;
-
-   rec_app_object_type  app_object_type%ROWTYPE;
-   rec_app_object       app_objects%ROWTYPE;
+   rec_application         application%ROWTYPE;
+   rec_app_object_type     app_object_type%ROWTYPE;
+   rec_app_object          app_objects%ROWTYPE;
+   rec_app_object_metadata app_object_metadata%ROWTYPE;
 BEGIN
    assert(ip_object_name = UPPER(ip_object_name), 'ip_object_name should be all upper case');
    assert(ip_object_type = UPPER(ip_object_type), 'ip_object_type should be all upper case');
+   assert(ip_discriminator_col = UPPER(ip_discriminator_col), 'ip_discriminator_col should be all upper case');
+   assert(ip_object_type = 'TABLE', 'add_object_metadata_p is only supported for object_type "TABLE"');
+   get_object_type_p( ip_object_type     => ip_object_type
+                    , op_rec_object_type => rec_app_object_type )
+   ;
+   get_object_p( ip_object_name          => ip_object_name
+               , ip_object_namespace     => rec_app_object_type.object_namespace
+               , op_rec_object           => rec_app_object )
+   ;
+   get_application_rec_p( ip_application_name => ip_application_name
+                        , op_rec_application  => rec_application )
+   ;
+   rec_app_object_metadata := t_app_object_metadata
+      ( object_name         => ip_object_name
+      , object_namespace    => rec_app_object.object_namespace
+      , object_type         => ip_object_type
+      , application_name    => rec_application.application_name
+      , discriminator_col   => ip_discriminator_col
+      , discriminator_val   => ip_discriminator_val
+      , last_update         => SYSDATE
+      , version             => ip_version
+      , dml_override_proc   => ip_dml_override_proc
+      );
+   
+   MERGE INTO APP_OBJECT_METADATA t
+      USING (SELECT NULL FROM dual)
+        ON (    t.object_name              = rec_app_object_metadata.object_name
+            AND t.object_namespace         = rec_app_object_metadata.object_namespace
+            AND t.discriminator_col        = rec_app_object_metadata.discriminator_col
+            AND t.discriminator_val        = rec_app_object_metadata.discriminator_val
+           )
+      WHEN MATCHED
+      THEN
+         UPDATE SET
+           t.last_update                 = rec_app_object_metadata.last_update      
+         , t.version                     = rec_app_object_metadata.version          
+         , t.dml_override_proc           = rec_app_object_metadata.dml_override_proc
+      WHEN NOT MATCHED
+      THEN
+         INSERT VALUES rec_app_object_metadata;
 
+   COMMIT;
+END add_object_metadata_p;
+
+
+
+PROCEDURE delete_object_metadata_p( ip_application_name  IN application.application_name%TYPE
+                                  , ip_object_name       IN app_objects.object_name%TYPE
+                                  , ip_object_type       IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
+                                  , ip_discriminator_col IN app_object_metadata.discriminator_col%TYPE
+                                  , ip_discriminator_val IN app_object_metadata.discriminator_val%TYPE
+                                  )
+IS
+   rec_application         application%ROWTYPE;
+   rec_app_object_type     app_object_type%ROWTYPE;
+   rec_app_object          app_objects%ROWTYPE;
+   rec_app_object_metadata app_object_metadata%ROWTYPE;
+BEGIN
+   assert(ip_object_name = UPPER(ip_object_name), 'ip_object_name should be all upper case');
+   assert(ip_object_type = UPPER(ip_object_type), 'ip_object_type should be all upper case');
+   assert(ip_discriminator_col = UPPER(ip_discriminator_col), 'ip_discriminator_col should be all upper case');
+
+   get_application_rec_p( ip_application_name => ip_application_name
+                        , op_rec_application  => rec_application )
+   ;
    get_object_type_p( ip_object_type     => ip_object_type
                     , op_rec_object_type => rec_app_object_type );
 
    get_object_p( ip_object_name          => ip_object_name
                , ip_object_namespace     => rec_app_object_type.object_namespace
                , op_rec_object           => rec_app_object );
+   SELECT *
+     INTO rec_app_object_metadata
+    FROM app_object_metadata
+   WHERE object_name = ip_object_name
+     AND object_namespace = rec_app_object.object_namespace
+     AND discriminator_col = ip_discriminator_col
+     AND discriminator_val = ip_discriminator_val
+   ;
+   assert(rec_application.application_name = rec_app_object_metadata.application_name, 'ip_application_name does not match application associated with metadata record')
+   ;
+   IF rec_app_object_metadata.dml_override_proc IS NULL THEN
+      assert(rec_app_object_metadata.discriminator_col != 'NONE', 'Do not call this procedure for discriminator values of "NONE" unless dml_override_proc is populated')
+      ;
+      EXECUTE IMMEDIATE 'DELETE FROM '||ip_object_name
+        ||' WHERE '||rec_app_object_metadata.discriminator_col||' = :discriminator_val' USING rec_app_object_metadata.discriminator_val;
+   ELSE
+      EXECUTE IMMEDIATE 'BEGIN '||rec_app_object_metadata.dml_override_proc||'; END;';
+   END IF;
 
-   INSERT
-     INTO APP_OBJECT_METADATA
-        ( OBJECT_NAME
-        , OBJECT_NAMESPACE
-        , OBJECT_TYPE
-        , DISCRIMINATOR
-        , KEY
-        , INSERT_TIME
-        , METADATA_VALUE )
-   VALUES 
-        ( ip_object_name
-        , rec_app_object_type.object_namespace
-        , ip_object_type
-        , ip_discriminator
-        , ip_key
-        , SYSDATE
-        , ip_value
-        );
-
+   DELETE 
+     FROM app_object_metadata
+   WHERE object_name       = rec_app_object_metadata.object_name
+     AND object_type       = rec_app_object_metadata.object_type
+     AND discriminator_col = rec_app_object_metadata.discriminator_col
+     AND discriminator_val = rec_app_object_metadata.discriminator_val
+   ;
    COMMIT;
-END add_object_metadata_p;
+END delete_object_metadata_p;
 
 
 
@@ -795,7 +867,30 @@ BEGIN
     WHERE depends_on = ip_application_name;
    
    assert(l_dependent_app_cnt = 0, 'Application cannot be deleted; the following applications depend on it: '||l_dependent_app_lst);
-    
+   
+   --delete object metadata associated with the application
+   FOR rec_app_object_metadata
+    IN
+    (
+      SELECT *
+        FROM app_object_metadata
+       WHERE application_name = ip_application_name
+       ORDER
+          BY object_name
+   )
+   LOOP
+      IF NOT (    rec_app_object_metadata.discriminator_col = 'NONE'
+              AND rec_app_object_metadata.dml_override_proc IS NULL ) 
+      THEN
+         delete_object_metadata_p
+           ( ip_application_name  => ip_application_name
+           , ip_object_name       => rec_app_object_metadata.object_name
+           , ip_object_type       => rec_app_object_metadata.object_type
+           , ip_discriminator_col => rec_app_object_metadata.discriminator_col
+           , ip_discriminator_val => rec_app_object_metadata.discriminator_val );
+      END IF;
+   END LOOP
+   ;
    FOR rec_app_object
     IN 
     (

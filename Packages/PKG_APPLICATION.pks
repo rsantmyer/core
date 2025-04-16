@@ -34,6 +34,18 @@ AS
    , deploy_end                 application.deploy_end%TYPE 
    )
    ;
+   TYPE t_app_object_metadata IS RECORD
+   ( object_name               app_object_metadata.object_name%TYPE
+   , object_namespace          app_object_metadata.object_namespace%TYPE
+   , object_type               app_object_metadata.object_type%TYPE
+   , application_name          app_object_metadata.application_name%TYPE
+   , discriminator_col         app_object_metadata.discriminator_col%TYPE
+   , discriminator_val         app_object_metadata.discriminator_val%TYPE
+   , last_update               app_object_metadata.last_update%TYPE
+   , version                   app_object_metadata.version%TYPE
+   , dml_override_proc         app_object_metadata.dml_override_proc%TYPE
+   )
+   ;
 --------------------------------------------------------------------------------
    --PACKAGE CONSTANTS
    --
@@ -133,12 +145,21 @@ AS
                          , ip_object_type      IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
                          );
    --
-   PROCEDURE add_object_metadata_p( ip_object_name      IN app_objects.object_name%TYPE
-                                  , ip_object_type      IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
-                                  , ip_discriminator    IN app_object_metadata.discriminator%TYPE DEFAULT 'NONE'
-                                  , ip_key              IN app_object_metadata.key%TYPE DEFAULT 'VERSION'
-                                  , ip_value            IN app_object_metadata.metadata_value%TYPE
+   PROCEDURE add_object_metadata_p( ip_application_name  IN application.application_name%TYPE
+                                  , ip_object_name       IN app_objects.object_name%TYPE
+                                  , ip_object_type       IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
+                                  , ip_discriminator_col IN app_object_metadata.discriminator_col%TYPE DEFAULT 'NONE'
+                                  , ip_discriminator_val IN app_object_metadata.discriminator_val%TYPE DEFAULT 'NONE'
+                                  , ip_version           IN app_object_metadata.version%TYPE DEFAULT NULL
+                                  , ip_dml_override_proc IN app_object_metadata.dml_override_proc%TYPE DEFAULT NULL
                                   );
+   --
+   PROCEDURE delete_object_metadata_p( ip_application_name  IN application.application_name%TYPE
+                                     , ip_object_name       IN app_objects.object_name%TYPE
+                                     , ip_object_type       IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
+                                     , ip_discriminator_col IN app_object_metadata.discriminator_col%TYPE
+                                     , ip_discriminator_val IN app_object_metadata.discriminator_val%TYPE
+                                     );
    --
    PROCEDURE validate_objects_p( ip_application_name IN application.application_name%TYPE);
    --
