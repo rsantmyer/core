@@ -40,9 +40,6 @@ Prompt Creating Package Bodies
 @@../Metadata/APP_OBJECT_TYPE.sql
 
 EXEC DBMS_UTILITY.COMPILE_SCHEMA(SCHEMA => SYS_CONTEXT('USERENV','CURRENT_SCHEMA'), COMPILE_ALL => FALSE);
-
-EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_APPLICATION'  , ip_object_type => pkg_application.c_object_type_package_body);
-EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_APPLICATION'  , ip_object_type => pkg_application.c_object_type_package);
 --
 EXEC pkg_application.validate_objects_p(ip_application_name => '&&APPLICATION_NAME');
 EXEC pkg_application.validate_sys_privs_p(ip_application_name => '&&APPLICATION_NAME');
