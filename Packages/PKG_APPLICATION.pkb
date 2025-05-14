@@ -853,6 +853,29 @@ END drop_and_forget_object_p;
 
 
 
+PROCEDURE change_object_application_p( ip_object_name           IN app_objects.object_name%TYPE
+                                     , ip_new_application_name  IN application.application_name%TYPE
+                                     , ip_object_type           IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
+                                     , ip_old_application_name  IN application.application_name%TYPE DEFAULT NULL )
+IS
+   rec_app_object_type  app_object_type%ROWTYPE;
+BEGIN
+   get_object_type_p( ip_object_type     => ip_object_type
+                    , op_rec_object_type => rec_app_object_type );
+
+   UPDATE app_objects
+      SET application_name = ip_new_application_name
+    WHERE object_namespace = rec_app_object_type.object_namespace
+      AND object_name = ip_object_name
+      AND application_name = NVL(ip_old_application_name, application_name)
+      AND application_name != ip_new_application_name
+   ;
+   assert(SQL%ROWCOUNT = 1, SQL%ROWCOUNT||' records modified. Expecting 1.')
+   ;
+END change_object_application_p;
+
+
+
 PROCEDURE delete_application_p( ip_application_name  IN application.application_name%TYPE
                               , ip_fail_on_not_found IN VARCHAR2 DEFAULT 'Y' )
 IS

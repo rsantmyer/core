@@ -51,6 +51,7 @@ BEGIN
 Q'{2.3.0
 * Add "MATERIALIZED VIEW" object type
 * Add pkg_application.drop_and_forget_object_p
+* Add pkg_application.change_object_application_p
 2.2.0:
 * Replace the table APP_OBJECT_METADATA
 * Modify pkg_application to update add_object_metadata_p, add delete_object_metadata_p, call delete_object_metadata_p from within delete_application_p

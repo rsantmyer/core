@@ -178,5 +178,10 @@ AS
    PROCEDURE drop_and_forget_object_p( ip_object_type IN app_objects.object_type%TYPE
                                      , ip_object_name IN app_objects.object_name%TYPE );
    --
+   PROCEDURE change_object_application_p( ip_object_name           IN app_objects.object_name%TYPE
+                                        , ip_new_application_name  IN application.application_name%TYPE
+                                        , ip_object_type           IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
+                                        , ip_old_application_name  IN application.application_name%TYPE DEFAULT NULL );
+   --
 END PKG_APPLICATION;
 /
