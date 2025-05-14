@@ -122,6 +122,11 @@ l_APP_OBJECT_TYPE(V_I).OBJECT_NAMESPACE        := 'OTHER';
 l_APP_OBJECT_TYPE(V_I).SUPPORTED               := 'N';
 -------------------------------------------------------------------------------- 
 V_I := V_I + 1;
+l_APP_OBJECT_TYPE(V_I).OBJECT_TYPE             := 'MATERIALIZED VIEW';
+l_APP_OBJECT_TYPE(V_I).OBJECT_NAMESPACE        := 'DEFAULT';
+l_APP_OBJECT_TYPE(V_I).SUPPORTED               := 'Y';
+-------------------------------------------------------------------------------- 
+V_I := V_I + 1;
 l_APP_OBJECT_TYPE(V_I).OBJECT_TYPE             := 'OPERATOR';
 l_APP_OBJECT_TYPE(V_I).OBJECT_NAMESPACE        := 'OTHER';
 l_APP_OBJECT_TYPE(V_I).SUPPORTED               := 'N';

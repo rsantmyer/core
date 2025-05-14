@@ -78,6 +78,7 @@ AS
    c_object_type_sequence     CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'SEQUENCE';
    c_object_type_procedure    CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'PROCEDURE';
    c_object_type_function     CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'FUNCTION';
+   c_object_type_materialized_view     CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'MATERIALIZED VIEW';
    c_object_type_type         CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'TYPE';
    c_object_type_type_body    CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'TYPE BODY';
    c_object_type_package      CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'PACKAGE';
@@ -161,7 +162,7 @@ AS
                                      , ip_discriminator_val IN app_object_metadata.discriminator_val%TYPE
                                      );
    --
-   PROCEDURE validate_objects_p( ip_application_name IN application.application_name%TYPE);
+   PROCEDURE validate_objects_p( ip_application_name IN application.application_name%TYPE); --bugbug: should we validate object_metadata?
    --
    PROCEDURE delete_application_p( ip_application_name  IN application.application_name%TYPE
                                  , ip_fail_on_not_found IN VARCHAR2 DEFAULT 'Y' );
@@ -173,6 +174,9 @@ AS
 
    PROCEDURE forget_object_p( ip_object_type IN app_objects.object_type%TYPE
                             , ip_object_name IN app_objects.object_name%TYPE );
-
+   --
+   PROCEDURE drop_and_forget_object_p( ip_object_type IN app_objects.object_type%TYPE
+                                     , ip_object_name IN app_objects.object_name%TYPE );
+   --
 END PKG_APPLICATION;
 /

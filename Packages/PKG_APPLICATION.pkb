@@ -793,6 +793,8 @@ BEGIN
          l_stmt := 'DROP PACKAGE BODY "'||ip_object_name||'"';
    WHEN c_object_type_view         THEN
          l_stmt := 'DROP VIEW "'||ip_object_name||'"';
+   WHEN c_object_type_materialized_view         THEN
+         l_stmt := 'DROP MATERIALIZED VIEW "'||ip_object_name||'"';
    WHEN c_object_type_db_link      THEN
          l_stmt := 'DROP DATABASE LINK "'||ip_object_name||'"';
    WHEN c_object_type_synonym      THEN
@@ -837,6 +839,17 @@ BEGIN
 
    COMMIT;
 END forget_object_p;
+
+
+
+PROCEDURE drop_and_forget_object_p( ip_object_type IN app_objects.object_type%TYPE
+                                  , ip_object_name IN app_objects.object_name%TYPE )
+IS
+   rec_app_object_type app_object_type%ROWTYPE;
+BEGIN
+   drop_object_p( ip_object_type, ip_object_name);
+   forget_object_p( ip_object_type, ip_object_name);
+END drop_and_forget_object_p;
 
 
 
