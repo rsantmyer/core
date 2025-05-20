@@ -96,6 +96,47 @@ END get_current_version_f;
 
 
 
+FUNCTION serialize_version_f(ip_version IN VARCHAR)
+   RETURN INTEGER
+IS
+  l_major INTEGER;
+  l_minor INTEGER;
+  l_patch INTEGER;
+BEGIN
+   assert(REGEXP_LIKE(ip_version, '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$'), 'ip_version does not meet criteria for serialization: '||ip_version)
+   ;
+   l_major := REGEXP_SUBSTR(ip_version,'^(\d+\.)?(\d+\.)?(\*|\d+)$',1,1,null,1);
+   l_minor := REGEXP_SUBSTR(ip_version,'^(\d+\.)?(\d+\.)?(\*|\d+)$',1,1,null,2);
+   l_patch := REGEXP_SUBSTR(ip_version,'^(\d+\.)?(\d+\.)?(\*|\d+)$',1,1,null,3)
+   ;
+   RETURN (l_major * 100000000) + (l_minor * 10000) + l_patch;
+END serialize_version_f;
+
+
+
+FUNCTION deserialize_version_f(ip_serialized_version IN INTEGER)
+   RETURN VARCHAR
+IS
+  l_major_serialized INTEGER;
+  l_minor_patch      INTEGER;
+  l_major INTEGER;
+  l_minor INTEGER;
+  l_patch INTEGER;
+BEGIN
+   IF ip_serialized_version IS NULL THEN
+      RETURN NULL;
+   END IF;
+   l_major_serialized := TRUNC(ip_serialized_version,-8);
+   l_major := l_major_serialized/100000000;
+   l_minor_patch := ip_serialized_version - l_major_serialized;
+   l_minor := TRUNC(l_minor_patch,-4)/10000;
+   l_patch := ip_serialized_version - TRUNC(ip_serialized_version,-4)
+   ;
+   RETURN TO_CHAR(l_major)||'.'||TO_CHAR(l_minor)||'.'||TO_CHAR(l_patch);
+END deserialize_version_f;
+
+
+
 PROCEDURE check_min_app_version_p( ip_application_name  IN application.application_name%TYPE
                                  , ip_min_major_version IN application.major_version%TYPE DEFAULT 0
                                  , ip_min_minor_version IN application.minor_version%TYPE DEFAULT 0
@@ -392,8 +433,8 @@ BEGIN
       SET is_valid         = CASE ( SELECT COUNT(*) 
                                       FROM application 
                                      WHERE application.application_name = app_dependency.depends_on
-                                       AND application.major_version BETWEEN TRUNC(app_dependency.version_min)
-                                                                         AND TRUNC(app_dependency.version_max)  --BUGBUG - NEED TO LOOK AT minor_version ALSO
+                                       AND TO_NUMBER(application.major_version||'.'||application.minor_version) BETWEEN app_dependency.version_min
+                                                                                                                    AND app_dependency.version_max
                                   ) WHEN 0 THEN c_valid_no ELSE c_valid_yes END
         , last_validated   = SYSDATE
     WHERE application_name = ip_application_name;

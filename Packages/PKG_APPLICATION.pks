@@ -91,6 +91,14 @@ AS
    FUNCTION get_current_version_f( ip_application_name IN application.application_name%TYPE )
       RETURN VARCHAR;
 
+   --accept a string version in Major.mInor.Patch format and return an integer in the format MMMMIIIIPPPP
+   FUNCTION serialize_version_f(ip_version IN VARCHAR)
+      RETURN INTEGER;
+
+   --accept an integer version in the format MMMMIIIIPPPP and return a string version in Major.mInor.Patch format
+   FUNCTION deserialize_version_f(ip_serialized_version IN INTEGER)
+      RETURN VARCHAR;
+   
    --PROCEDURES
    --check that application version is at least ip_min_version
    PROCEDURE check_min_app_version_p( ip_application_name  IN application.application_name%TYPE
