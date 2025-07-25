@@ -48,10 +48,19 @@ Prompt Deploying tables
 --Package Specifications
 Prompt Creating Package Specifications
 @@../Packages/PKG_SYSLOG.pks
+@@../Packages/PKG_APPLICATION.pks   --redeploying unchanged version - in case prio deploys skipped.
+@@../Packages/PKG_APP_DICT.pks      --redeploying unchanged version - in case prio deploys skipped.
+@@../Packages/PKG_STRING.pks        --redeploying unchanged version - in case prio deploys skipped.
+@@../Packages/PKG_TRACE.pks         --redeploying unchanged version - in case prio deploys skipped.
 
 --Package Bodies
 Prompt Creating Package Bodies
 @@../Packages/PKG_SYSLOG.pkb
+@@../Packages/PKG_APPLICATION.pkb
+@@../Packages/PKG_APP_DICT.pkb
+@@../Packages/PKG_STRING.pkb
+@@../Packages/PKG_TRACE.pkb
+
 
 EXEC pkg_application.drop_and_forget_object_p(ip_object_name => 'PKG_ERROR_UTIL'  , ip_object_type => pkg_application.c_object_type_package_body);
 EXEC pkg_application.drop_and_forget_object_p(ip_object_name => 'PKG_ERROR_UTIL'  , ip_object_type => pkg_application.c_object_type_package);
