@@ -191,11 +191,13 @@ PROCEDURE begin_deployment_p( ip_application_name   IN application.application_n
                             , ip_patch_version      IN application.patch_version%TYPE
                             , ip_deployment_type    IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
                             , ip_deploy_commit_hash IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
+                            , ip_redeploy_okay      IN BOOLEAN DEFAULT FALSE
                             )
 IS
    rec_application         application%ROWTYPE;
    l_exists                BOOLEAN := FALSE;
    l_restart_failed_deploy BOOLEAN := FALSE;
+   l_redeploy_curr_ver     BOOLEAN := FALSE;
 BEGIN
    assert(ip_application_name = UPPER(ip_application_name));
    
@@ -249,17 +251,24 @@ BEGIN
                , 'deployment already in-progress; version must equal in-flight deployment version: '
                ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
          l_restart_failed_deploy := TRUE;
+      ELSIF ip_major_version = rec_application.major_version 
+        AND ip_minor_version = rec_application.minor_version 
+        AND ip_patch_version = rec_application.patch_version 
+      THEN
+         l_redeploy_curr_ver := TRUE;
       END IF;
 
-      CASE ip_deployment_type
-      WHEN c_deploy_type_major THEN
-         IF l_restart_failed_deploy = FALSE THEN
+      CASE WHEN l_redeploy_curr_ver = TRUE
+      THEN 
+         NULL; --bypass the rest of the version checks
+      WHEN ip_deployment_type = c_deploy_type_major THEN
+         IF     l_restart_failed_deploy = FALSE THEN
             assert( ip_major_version > rec_application.major_version 
                   , 'major version must be greater than deployed major version; deployed version is: '
                   ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
          END IF;
-      WHEN c_deploy_type_minor THEN
-         IF l_restart_failed_deploy = FALSE THEN
+      WHEN ip_deployment_type = c_deploy_type_minor THEN
+         IF     l_restart_failed_deploy = FALSE THEN
             assert(    ip_major_version = rec_application.major_version 
                   , 'Major version must match that already deployed; deployed version is: '
                   ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
@@ -268,7 +277,7 @@ BEGIN
                   , 'minor version must be greater than deployed minor version; deployed version is: '
                   ||rec_application.major_version||'.'||rec_application.minor_version||'.'||rec_application.patch_version);
          END IF;
-      WHEN c_deploy_type_patch THEN
+      WHEN ip_deployment_type = c_deploy_type_patch THEN
          IF l_restart_failed_deploy = FALSE THEN
             assert(    ip_major_version = rec_application.major_version 
                    AND ip_minor_version = rec_application.minor_version

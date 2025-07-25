@@ -22,9 +22,11 @@ EXEC pkg_application.check_min_app_version_p( ip_application_name => 'CORE', ip_
 --
 EXEC pkg_application.begin_deployment_p(ip_application_name => '&&APPLICATION_NAME', ip_major_version => &&DEPLOY_VERSION_MAJOR, ip_minor_version => &&DEPLOY_VERSION_MINOR, ip_patch_version => &&DEPLOY_VERSION_PATCH, ip_deployment_type => pkg_application.c_deploy_type_major);
 --
-EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'SYSTEM_LOG'  , ip_object_type => pkg_application.c_object_type_table);
-EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_SYSLOG'  , ip_object_type => pkg_application.c_object_type_package);
-EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_SYSLOG'  , ip_object_type => pkg_application.c_object_type_package_body);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'SYSTEM_LOG'       , ip_object_type => pkg_application.c_object_type_table);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_APPLICATION'  , ip_object_type => pkg_application.c_object_type_package);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_APPLICATION'  , ip_object_type => pkg_application.c_object_type_package_body);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_SYSLOG'       , ip_object_type => pkg_application.c_object_type_package);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_SYSLOG'       , ip_object_type => pkg_application.c_object_type_package_body);
 
 BEGIN
    pkg_application.set_deploy_notes_p
@@ -33,8 +35,10 @@ BEGIN
 Q'{3.0.0
 * Add table SYSTEM_LOG
 * Add pkg_syslog
-* drop pkg_error_util
-* drop table error_log
+* Drop pkg_error_util
+* Drop table error_log
+* Add ip_redeploy_okay parameter to pkg_application.begin_deployment.
+*   Used to flag deployments that will not cause issues if a successful deployment is redeployed.
 }'
    );
 END;

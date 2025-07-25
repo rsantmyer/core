@@ -119,6 +119,7 @@ AS
                                , ip_patch_version      IN application.patch_version%TYPE
                                , ip_deployment_type    IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
                                , ip_deploy_commit_hash IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
+                               , ip_redeploy_okay      IN BOOLEAN DEFAULT FALSE
                                );
    --
    PROCEDURE set_deploy_notes_p( ip_application_name IN application.application_name%TYPE
