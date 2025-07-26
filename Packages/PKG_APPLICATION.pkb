@@ -103,6 +103,10 @@ IS
   l_minor INTEGER;
   l_patch INTEGER;
 BEGIN
+   IF ip_version IS NULL THEN
+      RETURN NULL;
+   END IF
+   ;
    assert(REGEXP_LIKE(ip_version, '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$'), 'ip_version does not meet criteria for serialization: '||ip_version)
    ;
    l_major := REGEXP_SUBSTR(ip_version,'^(\d+\.)?(\d+\.)?(\*|\d+)$',1,1,null,1);
