@@ -1,7 +1,7 @@
 SET DEFINE ON
 DEFINE APPLICATION_NAME = 'CORE'
-DEFINE DEPLOY_VERSION_MAJOR = '2'
-DEFINE DEPLOY_VERSION_MINOR = '1'
+DEFINE DEPLOY_VERSION_MAJOR = '3'
+DEFINE DEPLOY_VERSION_MINOR = '0'
 DEFINE DEPLOY_VERSION_PATCH = '0'
 
 SPOOL deploy.&&APPLICATION_NAME..&1..log
@@ -20,11 +20,9 @@ WHENEVER OSERROR EXIT FAILURE
 
 --Sequences
 PROMPT Creating Sequences
-@@../Sequences/LOG_UID_SEQ.sql
 
 --Tables
 Prompt Creating Tables
-@@../Tables/ERROR_LOG.sql
 @@../Tables/APP_OBJ_NAMESPACE.sql
 @@../Tables/APPLICATION.sql
 @@../Tables/APP_DEPLOY_NOTES.sql --Depends on: APPLICATION
@@ -36,6 +34,7 @@ Prompt Creating Tables
 @@../Tables/APP_OBJECT_METADATA.sql --Depends on: APP_OBJECTS
 @@../Tables/APP_DEPLOY_HIST.sql
 @@../Tables/APP_DICTIONARY.sql
+@@../Tables/SYSTEM_LOG.sql
 @@../Tables/TRACE_LOG.sql
 
 --Procedures
@@ -45,19 +44,22 @@ Prompt Creating Procedures
 --Types
 Prompt Creating Types
 @@../Types/NUM_TAB.sql
+@@../Types/VARCHAR_TAB.sql
 
 --Package Specifications
 Prompt Creating Package Specifications
-@@../Packages/PKG_ERROR_UTIL.pks
 @@../Packages/PKG_APPLICATION.pks
 @@../Packages/PKG_APP_DICT.pks
+@@../Packages/PKG_SYSLOG.pks
+@@../Packages/PKG_STRING.pks
 @@../Packages/PKG_TRACE.pks
 
 --Package Bodies
 Prompt Creating Package Bodies
-@@../Packages/PKG_ERROR_UTIL.pkb
 @@../Packages/PKG_APPLICATION.pkb
 @@../Packages/PKG_APP_DICT.pkb
+@@../Packages/PKG_SYSLOG.pkb
+@@../Packages/PKG_STRING.pkb
 @@../Packages/PKG_TRACE.pkb
 
 --Metadata
@@ -69,7 +71,6 @@ Prompt Deploying Metadata
 SET DEFINE ON
 EXEC pkg_application.begin_deployment_p(ip_application_name => '&&APPLICATION_NAME', ip_major_version => &&DEPLOY_VERSION_MAJOR, ip_minor_version => &&DEPLOY_VERSION_MINOR, ip_patch_version => &&DEPLOY_VERSION_PATCH, ip_deployment_type => pkg_application.c_deploy_type_initial);
 --SEQUENCES
-EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'LOG_UID_SEQ'      , ip_object_type => pkg_application.c_object_type_sequence);
 --TABLES
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPENDENCY'   , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPLOY_NOTES' , ip_object_type => pkg_application.c_object_type_table);
@@ -82,19 +83,22 @@ EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', i
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APPLICATION'      , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPLOY_HIST'      , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DICTIONARY'      , ip_object_type => pkg_application.c_object_type_table);
-EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'ERROR_LOG'        , ip_object_type => pkg_application.c_object_type_table);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'SYSTEM_LOG'        , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'TRACE_LOG'      , ip_object_type => pkg_application.c_object_type_table);
 --PROCEDURES
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'ASSERT'           , ip_object_type => pkg_application.c_object_type_procedure);
 --TYPES
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'NUM_TAB'          , ip_object_type => pkg_application.c_object_type_type);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'VARCHAR_TAB'      , ip_object_type => pkg_application.c_object_type_type);
 --PACKAGE SPECS / PACKAGE BODIES
-EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_ERROR_UTIL'   , ip_object_type => pkg_application.c_object_type_package);
-EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_ERROR_UTIL'   , ip_object_type => pkg_application.c_object_type_package_body);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_APPLICATION'  , ip_object_type => pkg_application.c_object_type_package);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_APPLICATION'  , ip_object_type => pkg_application.c_object_type_package_body);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_APP_DICT'  , ip_object_type => pkg_application.c_object_type_package);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_APP_DICT'  , ip_object_type => pkg_application.c_object_type_package_body);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_SYSLOG'   , ip_object_type => pkg_application.c_object_type_package);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_SYSLOG'   , ip_object_type => pkg_application.c_object_type_package_body);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_STRING'  , ip_object_type => pkg_application.c_object_type_package);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_STRING'  , ip_object_type => pkg_application.c_object_type_package_body);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_TRACE'  , ip_object_type => pkg_application.c_object_type_package);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'PKG_TRACE'  , ip_object_type => pkg_application.c_object_type_package_body);
 --SYS PRIVS
@@ -107,7 +111,26 @@ BEGIN
    pkg_application.set_deploy_notes_p
    ( ip_application_name => '&&APPLICATION_NAME'
    , ip_notes => 
-Q'{2.1.0:
+Q'{
+3.0.0
+* Add table SYSTEM_LOG
+* Add PKG_SYSLOG
+* Drop PKG_ERROR_UTIL
+* Drop table ERROR_LOG
+2.5.0
+* Add varchar_tab
+* Add pkg_string
+2.4.0
+* Add pkg_application.serialize_version_f
+* Add pkg_application.deserialize_version_f
+2.3.0:
+* Add "MATERIALIZED VIEW" object type
+* Add pkg_application.drop_and_forget_object_p
+* Add pkg_application.change_object_application_p
+2.2.0:
+* Replace app_object_metadata table with new structure
+* Modify pkg_application to update add_object_metadata_p, add delete_object_metadata_p, call delete_object_metadata_p from within delete_application_p
+2.1.0:
 * Add the table APP_DEPLOY_NOTES
 * Add pkg_application.get_current_version_f
 * Add pkg_application.set_deploy_notes_p
