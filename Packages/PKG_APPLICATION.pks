@@ -155,6 +155,23 @@ AS
                          , ip_object_type      IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
                          );
    --
+/**
+ * @description Registers metadata rows owned by ip_application_name that reside in a table
+ * belonging to another application. On delete_application_p, core will automatically remove
+ * these rows via DELETE FROM ip_object_name WHERE ip_discriminator_col = ip_discriminator_val,
+ * or by calling ip_dml_override_proc when a plain DELETE is insufficient.
+ * @param ip_application_name The application claiming ownership of the metadata rows.
+ * @param ip_object_name The table containing the metadata rows. Must already be registered
+ * in APP_OBJECTS (under any application).
+ * @param ip_object_type Object type of ip_object_name. Currently only TABLE is supported.
+ * @param ip_discriminator_col The column name that identifies rows belonging to this application.
+ * Use 'NONE' when ip_dml_override_proc handles all identification internally.
+ * @param ip_discriminator_val The value in ip_discriminator_col that marks rows as owned by
+ * ip_application_name. Use 'NONE' together with ip_dml_override_proc.
+ * @param ip_version Optional semantic version (major.minor.patch) of the metadata registration.
+ * @param ip_dml_override_proc Optional procedure name called as BEGIN <proc>; END; instead of
+ * the default DELETE. Use when cleanup requires dropping dynamic objects or cascading deletes.
+ */
    PROCEDURE add_object_metadata_p( ip_application_name  IN application.application_name%TYPE
                                   , ip_object_name       IN app_objects.object_name%TYPE
                                   , ip_object_type       IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
@@ -163,6 +180,16 @@ AS
                                   , ip_version           IN app_object_metadata.version%TYPE DEFAULT NULL
                                   , ip_dml_override_proc IN app_object_metadata.dml_override_proc%TYPE DEFAULT NULL
                                   );
+/**
+ * @description Removes a single metadata registration and executes its associated cleanup
+ * (DELETE or dml_override_proc). Called automatically by delete_application_p for all
+ * registered metadata; call directly only to deregister a specific entry mid-deployment.
+ * @param ip_application_name The application that owns the metadata registration.
+ * @param ip_object_name The table the metadata registration points to.
+ * @param ip_object_type Object type of ip_object_name.
+ * @param ip_discriminator_col The discriminator column recorded at registration time.
+ * @param ip_discriminator_val The discriminator value recorded at registration time.
+ */
    --
    PROCEDURE delete_object_metadata_p( ip_application_name  IN application.application_name%TYPE
                                      , ip_object_name       IN app_objects.object_name%TYPE
@@ -173,6 +200,15 @@ AS
    --
    PROCEDURE validate_objects_p( ip_application_name IN application.application_name%TYPE); --bugbug: should we validate object_metadata?
    --
+/**
+ * @description Fully removes an application and all objects registered to it. Cleanup order:
+ * (1) all metadata registrations are processed (dml_override_proc called where set, otherwise
+ * DELETE FROM table WHERE col = val); (2) all registered database objects are physically dropped
+ * via DROP statements; (3) application and dictionary records are deleted.
+ * @param ip_application_name The application to remove.
+ * @param ip_fail_on_not_found 'Y' (default) raises an error if the application is not found;
+ * 'N' silently succeeds.
+ */
    PROCEDURE delete_application_p( ip_application_name  IN application.application_name%TYPE
                                  , ip_fail_on_not_found IN VARCHAR2 DEFAULT 'Y' );
    --
