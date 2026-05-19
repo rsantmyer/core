@@ -7,6 +7,15 @@ The "core" application provides the following items:
 * pkg_trace        - a trace facility to help isolate problems
 * num_tab type     - a number table useful for passing around arrays of numbers
 
+## Uninstalling core
+
+This repository includes `Deployment_Manifests/uninstall.core.sql`, a self-contained uninstall script for the `core` deployment.
+
+- It drops the objects created by `deploy.core.full.sql`.
+- It does not rely on `APP_OBJECTS` or `pkg_application` metadata being populated.
+- It prompts for confirmation before proceeding.
+- It is intended for use in a safe, non-production environment and should be run only when you want to completely remove the `core` deployment artifacts.
+
 ## Cross-Application Metadata Ownership
 
 A key feature of `pkg_application` is the ability to register metadata that belongs to one application but lives in a table owned by another. This ensures automatic cleanup when `delete_application_p` is called, with no orphaned rows left behind.
