@@ -309,7 +309,11 @@ BEGIN
        WHERE application_name = ip_application_name;
    END CASE;
 
-   arch_application_rec_P( ip_rec_application => rec_application );
+   IF ip_deployment_type != c_deploy_type_initial
+      OR l_exists = TRUE
+   THEN
+      arch_application_rec_P( ip_rec_application => rec_application );
+   END IF;
 
    COMMIT;
    
