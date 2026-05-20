@@ -196,6 +196,7 @@ PROCEDURE begin_deployment_p( ip_application_name   IN application.application_n
                             , ip_deployment_type    IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
                             , ip_deploy_commit_hash IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
                             , ip_redeploy_okay      IN BOOLEAN DEFAULT FALSE
+                            , ip_notes              IN app_deploy_notes.notes%TYPE DEFAULT NULL
                             )
 IS
    rec_application         application%ROWTYPE;
@@ -311,6 +312,11 @@ BEGIN
    arch_application_rec_P( ip_rec_application => rec_application );
 
    COMMIT;
+   
+   IF ip_notes IS NOT NULL THEN
+      set_deploy_notes_p( ip_application_name => ip_application_name
+                        , ip_notes => ip_notes );
+   END IF;
 END begin_deployment_p;
 
 

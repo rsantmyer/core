@@ -191,6 +191,7 @@ AS
                                , ip_deployment_type    IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
                                , ip_deploy_commit_hash IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
                                , ip_redeploy_okay      IN BOOLEAN DEFAULT FALSE
+                               , ip_notes              IN app_deploy_notes.notes%TYPE DEFAULT NULL
                                );
 /**
  * @description Stores free-form deployment notes for the current deployment.
