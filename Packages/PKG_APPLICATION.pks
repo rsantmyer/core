@@ -1,22 +1,46 @@
 CREATE OR REPLACE PACKAGE PKG_APPLICATION
 AS
 --Usage:
--- This package is intended to help track application dependencies as well as system and object privileges needed.
+-- This package is the core application registry and deployment-control API.
+-- It records which database applications are installed, which version is currently
+-- deployed, what other applications they depend on, which privileges they require,
+-- which database objects they own, and which metadata rows they own inside tables
+-- registered by other applications.
 --
--- For initial deployments:
---   EXEC pkg_application.begin_deployment_p(ip_application_name => ':APPLICATION_NAME:');  --Assumes an initial deployment with version 0.1
---   OR
---   EXEC pkg_application.begin_deployment_p(ip_application_name => ':APPLICATION_NAME:', ip_version => 1, ip_deployment_type => pkg_application.c_deploy_type_initial);
+-- Typical deployment lifecycle:
+--   1. Start or resume a deployment with begin_deployment_p.
+--   2. Register dependencies, required privileges, owned objects, and owned metadata.
+--   3. Validate dependencies, privileges, and objects.
+--   4. Mark the deployment complete, or failed, before the script exits.
 --
---   EXEC pkg_application.add_dependency_p  (ip_application_name => ':APPLICATION_NAME:', ip_depends_on => ':APPLICATION2_NAME:');
---   ...
---   EXEC pkg_application.add_sys_priv_p    (ip_application_name => ':APPLICATION_NAME:', ip_privilege => ':SYS_PRIV:');
---   ...
---   EXEC pkg_application.add_obj_priv_p    (ip_application_name => ':APPLICATION_NAME:', ip_owner => ':OBJECT_OWNER:', ip_type => ':OBJECT_TYPE:', ip_name => ':OBJECT_NAME:', ip_privilege => ':OBJECT_PRIV:');
---   ...
+-- For an initial deployment using the default version 0.1.0:
+--   EXEC pkg_application.begin_deployment_p(ip_application_name => ':APPLICATION_NAME:');
+--
+-- For an initial deployment using an explicit semantic version:
+--   EXEC pkg_application.begin_deployment_p
+--   ( ip_application_name => ':APPLICATION_NAME:'
+--   , ip_major_version    => 1
+--   , ip_minor_version    => 0
+--   , ip_patch_version    => 0
+--   , ip_deployment_type  => pkg_application.c_deploy_type_initial
+--   );
+--
+-- Register dependencies and requirements:
+--   EXEC pkg_application.add_dependency_p(ip_application_name => ':APPLICATION_NAME:', ip_depends_on => ':APPLICATION2_NAME:');
+--   EXEC pkg_application.add_sys_priv_p  (ip_application_name => ':APPLICATION_NAME:', ip_privilege => ':SYS_PRIV:');
+--   EXEC pkg_application.add_obj_priv_p
+--   ( ip_application_name => ':APPLICATION_NAME:'
+--   , ip_owner            => ':OBJECT_OWNER:'
+--   , ip_type             => ':OBJECT_TYPE:'
+--   , ip_name             => ':OBJECT_NAME:'
+--   , ip_privilege        => ':OBJECT_PRIV:'
+--   );
+--
+-- Validate and finish:
 --   EXEC pkg_application.validate_dependencies_p  (ip_application_name => ':APPLICATION_NAME:');
 --   EXEC pkg_application.validate_obj_privs_p     (ip_application_name => ':APPLICATION_NAME:');
 --   EXEC pkg_application.validate_sys_privs_p     (ip_application_name => ':APPLICATION_NAME:');
+--   EXEC pkg_application.validate_objects_p       (ip_application_name => ':APPLICATION_NAME:');
 --   EXEC pkg_application.set_deployment_complete_p(ip_application_name => ':APPLICATION_NAME:');
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -88,31 +112,74 @@ AS
    c_object_type_synonym      CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'SYNONYM';
    
    --FUNCTIONS
+/**
+ * @description Returns the currently registered semantic version for an application
+ * in major.minor.patch format.
+ * @param ip_application_name Application to inspect.
+ * @return Current registered application version as text.
+ */
    FUNCTION get_current_version_f( ip_application_name IN application.application_name%TYPE )
       RETURN VARCHAR;
 
-   --accept a string version in Major.mInor.Patch format and return an integer in the format MMMMIIIIPPPP
+/**
+ * @description Converts a major.minor.patch version string into a sortable integer
+ * in MMMMIIIIPPPP format. This allows version ranges to be compared numerically.
+ * @param ip_version Semantic version string, such as '1.2.3'.
+ * @return Serialized integer representation of the version.
+ */
    FUNCTION serialize_version_f(ip_version IN VARCHAR)
       RETURN INTEGER;
 
-   --accept an integer version in the format MMMMIIIIPPPP and return a string version in Major.mInor.Patch format
+/**
+ * @description Converts a serialized MMMMIIIIPPPP integer version back into
+ * major.minor.patch format.
+ * @param ip_serialized_version Serialized integer version.
+ * @return Semantic version string.
+ */
    FUNCTION deserialize_version_f(ip_serialized_version IN INTEGER)
       RETURN VARCHAR;
    
    --PROCEDURES
-   --check that application version is at least ip_min_version
+/**
+ * @description Raises an error unless ip_application_name is deployed at or above
+ * the supplied minimum semantic version. Use this at the start of scripts that
+ * require a previously installed application version.
+ * @param ip_application_name Application whose version should be checked.
+ * @param ip_min_major_version Minimum required major version.
+ * @param ip_min_minor_version Minimum required minor version.
+ * @param ip_min_patch_version Minimum required patch version.
+ */
    PROCEDURE check_min_app_version_p( ip_application_name  IN application.application_name%TYPE
                                     , ip_min_major_version IN application.major_version%TYPE DEFAULT 0
                                     , ip_min_minor_version IN application.minor_version%TYPE DEFAULT 0
                                     , ip_min_patch_version IN application.patch_version%TYPE DEFAULT 0
                                     );
 
-   --check that application version is less than ip_version
+/**
+ * @description Raises an error when the requested version has already been deployed.
+ * Use this to prevent accidental re-execution of non-idempotent deployment scripts.
+ * @param ip_application_name Application whose deployed version should be checked.
+ * @param ip_min_major_version Version being deployed - major component.
+ * @param ip_min_minor_version Version being deployed - minor component.
+ * @param ip_min_patch_version Version being deployed - patch component.
+ */
    PROCEDURE check_already_deployed_p( ip_application_name  IN application.application_name%TYPE
                                      , ip_min_major_version IN application.major_version%TYPE DEFAULT 0
                                      , ip_min_minor_version IN application.minor_version%TYPE DEFAULT 0
                                      , ip_min_patch_version IN application.patch_version%TYPE DEFAULT 0 );
 
+/**
+ * @description Starts a deployment run for ip_application_name. The procedure records
+ * the target semantic version, deployment type, commit hash, start timestamp, and
+ * running status. This is normally the first call in an application deployment script.
+ * @param ip_application_name Application being deployed.
+ * @param ip_major_version Target major version.
+ * @param ip_minor_version Target minor version.
+ * @param ip_patch_version Target patch version.
+ * @param ip_deployment_type Initial, major, minor, or patch deployment type constant.
+ * @param ip_deploy_commit_hash Source-control commit hash for traceability.
+ * @param ip_redeploy_okay TRUE allows re-running an already deployed version.
+ */
    PROCEDURE begin_deployment_p( ip_application_name   IN application.application_name%TYPE
                                , ip_major_version      IN application.major_version%TYPE
                                , ip_minor_version      IN application.minor_version%TYPE
@@ -121,35 +188,81 @@ AS
                                , ip_deploy_commit_hash IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
                                , ip_redeploy_okay      IN BOOLEAN DEFAULT FALSE
                                );
-   --
+/**
+ * @description Stores free-form deployment notes for the current deployment.
+ * @param ip_application_name Application whose deployment notes should be updated.
+ * @param ip_notes Notes to record.
+ */
    PROCEDURE set_deploy_notes_p( ip_application_name IN application.application_name%TYPE
                                , ip_notes            IN app_deploy_notes.notes%TYPE);
-   --
+/**
+ * @description Marks the active deployment complete and records its end timestamp.
+ * @param ip_application_name Application whose deployment should be marked complete.
+ */
    PROCEDURE set_deployment_complete_p( ip_application_name IN application.application_name%TYPE);
-   --
+/**
+ * @description Marks the active deployment failed and records its end timestamp.
+ * @param ip_application_name Application whose deployment should be marked failed.
+ */
    PROCEDURE set_deployment_fail_p( ip_application_name IN application.application_name%TYPE);
-   --
+/**
+ * @description Registers that ip_application_name depends on another application,
+ * optionally constrained to a serialized minimum and maximum version range.
+ * @param ip_application_name Application declaring the dependency.
+ * @param ip_depends_on Required application.
+ * @param ip_version_min Minimum serialized version allowed.
+ * @param ip_version_max Maximum serialized version allowed.
+ */
    PROCEDURE add_dependency_p( ip_application_name IN application.application_name%TYPE
                              , ip_depends_on       IN app_dependency.depends_on%TYPE
                              , ip_version_min      IN app_dependency.version_min%TYPE DEFAULT c_version_min_any
                              , ip_version_max      IN app_dependency.version_max%TYPE DEFAULT c_version_max_any
                              );
-   --
+/**
+ * @description Validates all registered dependencies for an application and records
+ * whether each dependency is currently satisfied.
+ * @param ip_application_name Application whose dependencies should be validated.
+ */
    PROCEDURE validate_dependencies_p( ip_application_name IN application.application_name%TYPE);
-   --
+/**
+ * @description Registers a required system privilege for an application.
+ * @param ip_application_name Application requiring the privilege.
+ * @param ip_privilege System privilege name.
+ */
    PROCEDURE add_sys_priv_p( ip_application_name IN application.application_name%TYPE
                            , ip_privilege        IN app_sys_privs.privilege%TYPE);
-   --
+/**
+ * @description Validates registered system privileges for an application against
+ * privileges currently available to the executing schema.
+ * @param ip_application_name Application whose system privileges should be validated.
+ */
    PROCEDURE validate_sys_privs_p( ip_application_name IN application.application_name%TYPE);
-   --
+/**
+ * @description Registers a required object privilege for an application.
+ * @param ip_application_name Application requiring the privilege.
+ * @param ip_owner Owner of the referenced object.
+ * @param ip_type Object type.
+ * @param ip_name Object name.
+ * @param ip_privilege Required object privilege.
+ */
    PROCEDURE add_obj_priv_p( ip_application_name IN application.application_name%TYPE
                            , ip_owner            IN app_obj_privs.owner%TYPE
                            , ip_type             IN app_obj_privs.type%TYPE
                            , ip_name             IN app_obj_privs.name%TYPE
                            , ip_privilege        IN app_obj_privs.privilege%TYPE);
-   --
+/**
+ * @description Validates registered object privileges for an application against
+ * privileges currently available to the executing schema.
+ * @param ip_application_name Application whose object privileges should be validated.
+ */
    PROCEDURE validate_obj_privs_p( ip_application_name IN application.application_name%TYPE);
-   --
+/**
+ * @description Registers a database object as being owned by an application. Registered
+ * objects can later be validated and physically dropped by delete_application_p.
+ * @param ip_application_name Application that owns the object.
+ * @param ip_object_name Object name.
+ * @param ip_object_type Object type.
+ */
    PROCEDURE add_object_p( ip_application_name IN application.application_name%TYPE
                          , ip_object_name      IN app_objects.object_name%TYPE
                          , ip_object_type      IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
@@ -197,9 +310,12 @@ AS
                                      , ip_discriminator_col IN app_object_metadata.discriminator_col%TYPE
                                      , ip_discriminator_val IN app_object_metadata.discriminator_val%TYPE
                                      );
-   --
+/**
+ * @description Validates that all database objects registered to an application
+ * currently exist.
+ * @param ip_application_name Application whose registered objects should be validated.
+ */
    PROCEDURE validate_objects_p( ip_application_name IN application.application_name%TYPE); --bugbug: should we validate object_metadata?
-   --
 /**
  * @description Fully removes an application and all objects registered to it. Cleanup order:
  * (1) all metadata registrations are processed (dml_override_proc called where set, otherwise
@@ -211,18 +327,45 @@ AS
  */
    PROCEDURE delete_application_p( ip_application_name  IN application.application_name%TYPE
                                  , ip_fail_on_not_found IN VARCHAR2 DEFAULT 'Y' );
-   --
+/**
+ * @description Deletes all application-registry data and drops all registered objects.
+ * This is destructive and is intended for development reset scenarios, not routine
+ * production deployments.
+ */
    PROCEDURE delete_system_p;
-   --
+/**
+ * @description Physically drops a database object by type and name. The registry row,
+ * if any, is not removed by this procedure.
+ * @param ip_object_type Object type to drop.
+ * @param ip_object_name Object name to drop.
+ */
    PROCEDURE drop_object_p( ip_object_type IN app_objects.object_type%TYPE
                           , ip_object_name IN app_objects.object_name%TYPE );
 
+/**
+ * @description Removes an object from the registry without physically dropping it.
+ * @param ip_object_type Object type to forget.
+ * @param ip_object_name Object name to remove from the registry.
+ */
    PROCEDURE forget_object_p( ip_object_type IN app_objects.object_type%TYPE
                             , ip_object_name IN app_objects.object_name%TYPE );
-   --
+/**
+ * @description Physically drops an object and removes its registry entry. This is
+ * destructive and should be used only when the object is known to be application-owned.
+ * @param ip_object_type Object type to drop and forget.
+ * @param ip_object_name Object name to drop and remove from the registry.
+ */
    PROCEDURE drop_and_forget_object_p( ip_object_type IN app_objects.object_type%TYPE
                                      , ip_object_name IN app_objects.object_name%TYPE );
-   --
+/**
+ * @description Transfers a registered object from one application owner to another.
+ * Use this when refactoring application boundaries without physically moving or
+ * recreating the database object.
+ * @param ip_object_name Object whose registry ownership should change.
+ * @param ip_new_application_name New owning application.
+ * @param ip_object_type Object type.
+ * @param ip_old_application_name Optional current owner used to disambiguate duplicate names.
+ */
    PROCEDURE change_object_application_p( ip_object_name           IN app_objects.object_name%TYPE
                                         , ip_new_application_name  IN application.application_name%TYPE
                                         , ip_object_type           IN app_object_type.object_type%TYPE DEFAULT c_object_type_table
