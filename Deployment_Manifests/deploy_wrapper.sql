@@ -11,7 +11,7 @@ WHENEVER OSERROR EXIT FAILURE
 DEFINE CORE = 8e8283d198feb2965bd3c0f42401b6d6c7cc464a
 
 ALTER SESSION DISABLE PARALLEL DML;
-@./deploy.core.full.sql &CORE
+@./deploy.sql &CORE
 
 PAUSE Deploy complete. Press RETURN to add a dictionary entry for the environment (Optional)
 ACCEPT DEPLOY_ENV    CHAR PROMPT 'Deployment environment (i.e. DEV, TEST, PROD): '
