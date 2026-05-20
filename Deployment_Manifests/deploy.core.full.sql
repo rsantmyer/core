@@ -8,7 +8,7 @@ DEFINE DEPLOY_COMMIT_HASH = '&&1'
 COLUMN CURRENT_SCHEMA       new_value CURRENT_SCHEMA      
 SELECT sys_context('USERENV','CURRENT_SCHEMA') AS CURRENT_SCHEMA FROM DUAL;
 
-SPOOL deploy.&&APPLICATION_NAME..&&CURRENT_SCHEMA..log
+SPOOL deploy.&&APPLICATION_NAME..&&CURRENT_SCHEMA..&&DEPLOY_VERSION_MAJOR..&&DEPLOY_VERSION_MINOR..&&DEPLOY_VERSION_PATCH..log
 
 --PRINT BIND VARIABLE VALUES
 SET AUTOPRINT ON                    
@@ -31,6 +31,28 @@ WHENEVER OSERROR EXIT FAILURE
 EXEC EXECUTE IMMEDIATE 'ALTER SESSION DISABLE PARALLEL DML';
 
 PROMPT Beginning deployment of &&APPLICATION_NAME
+
+DECLARE
+    l_object_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO l_object_count
+      FROM user_objects
+     WHERE object_name IN (
+               'PKG_APPLICATION',
+               'APPLICATION',
+               'APP_DICTIONARY'
+           );
+
+    IF l_object_count > 0 THEN
+        raise_application_error(
+            -20000,
+            'CORE appears to already be deployed. Aborting deployment. ' ||
+            'Run the uninstall script first, or use an upgrade/redeploy script.'
+        );
+    END IF;
+END;
+/
 
 --Sequences
 PROMPT Creating Sequences
