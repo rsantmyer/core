@@ -177,7 +177,11 @@ AS
  * @param ip_minor_version Target minor version.
  * @param ip_patch_version Target patch version.
  * @param ip_deployment_type Initial, major, minor, or patch deployment type constant.
- * @param ip_deploy_commit_hash Source-control commit hash for traceability.
+ * @param ip_deploy_commit_hash: Optional but strongly recommended.
+                                 Identifies the exact source control commit associated with the
+                                 deployment. This allows environments running the same semantic
+                                 version to still be differentiated by source revision during
+                                 active development, hotfixes, or unreleased builds.
  * @param ip_redeploy_okay TRUE allows re-running an already deployed version.
  */
    PROCEDURE begin_deployment_p( ip_application_name   IN application.application_name%TYPE
