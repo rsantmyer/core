@@ -4,11 +4,14 @@ COLUMN CURRENT_SCHEMA       new_value CURRENT_SCHEMA
 
 SELECT sys_context('USERENV','CURRENT_SCHEMA') AS CURRENT_SCHEMA FROM DUAL;
 
-PAUSE !!!ALL Existing objects will be dropped from this schema!!! If this is correct, press RETURN to continue.
+WHENEVER SQLERROR EXIT FAILURE
+WHENEVER OSERROR EXIT FAILURE
+
+--Set the DEFINE variable for the commit hash. Doing it this way means the commit will be one behind the one in in the repo
+DEFINE CORE = 8e8283d198feb2965bd3c0f42401b6d6c7cc464a
 
 ALTER SESSION DISABLE PARALLEL DML;
-@./_Drop_All_Objects_In_arg1.sql "&&CURRENT_SCHEMA"
-@./deploy.core.full.sql "&&CURRENT_SCHEMA"
+@./deploy.core.full.sql &CORE
 
 PAUSE Deploy complete. Press RETURN to add a dictionary entry for the environment (Optional)
 ACCEPT DEPLOY_ENV    CHAR PROMPT 'Deployment environment (i.e. DEV, TEST, PROD): '

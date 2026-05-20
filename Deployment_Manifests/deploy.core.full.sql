@@ -93,6 +93,34 @@ BEGIN
       , ip_patch_version      => &&DEPLOY_VERSION_PATCH
       , ip_deployment_type    => pkg_application.c_deploy_type_initial  --c_deploy_type_minor
       --, ip_redeploy_curr_okay => TRUE
+      , ip_notes => 
+Q'{
+3.0.0
+* Add table SYSTEM_LOG
+* Add PKG_SYSLOG
+* Drop PKG_ERROR_UTIL
+* Drop table ERROR_LOG
+2.5.0
+* Add varchar_tab
+* Add pkg_string
+2.4.0
+* Add pkg_application.serialize_version_f
+* Add pkg_application.deserialize_version_f
+2.3.0:
+* Add "MATERIALIZED VIEW" object type
+* Add pkg_application.drop_and_forget_object_p
+* Add pkg_application.change_object_application_p
+2.2.0:
+* Replace app_object_metadata table with new structure
+* Modify pkg_application to update add_object_metadata_p, add delete_object_metadata_p, call delete_object_metadata_p from within delete_application_p
+2.1.0:
+* Add the table APP_DEPLOY_NOTES
+* Add pkg_application.get_current_version_f
+* Add pkg_application.set_deploy_notes_p
+--
+2.0.0:
+* Add support for semantic versioning (major, minor, patch)
+}'
       );
 END;
 /
@@ -134,40 +162,6 @@ EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', i
 EXEC pkg_application.validate_objects_p(ip_application_name => '&&APPLICATION_NAME');
 EXEC pkg_application.validate_sys_privs_p(ip_application_name => '&&APPLICATION_NAME');
 --
-BEGIN
-   pkg_application.set_deploy_notes_p
-   ( ip_application_name => '&&APPLICATION_NAME'
-   , ip_notes => 
-Q'{
-3.0.0
-* Add table SYSTEM_LOG
-* Add PKG_SYSLOG
-* Drop PKG_ERROR_UTIL
-* Drop table ERROR_LOG
-2.5.0
-* Add varchar_tab
-* Add pkg_string
-2.4.0
-* Add pkg_application.serialize_version_f
-* Add pkg_application.deserialize_version_f
-2.3.0:
-* Add "MATERIALIZED VIEW" object type
-* Add pkg_application.drop_and_forget_object_p
-* Add pkg_application.change_object_application_p
-2.2.0:
-* Replace app_object_metadata table with new structure
-* Modify pkg_application to update add_object_metadata_p, add delete_object_metadata_p, call delete_object_metadata_p from within delete_application_p
-2.1.0:
-* Add the table APP_DEPLOY_NOTES
-* Add pkg_application.get_current_version_f
-* Add pkg_application.set_deploy_notes_p
---
-2.0.0:
-* Add support for semantic versioning (major, minor, patch)
-}'
-   );
-END;
-/
 EXEC pkg_application.set_deployment_complete_p(ip_application_name => '&&APPLICATION_NAME');
 
 PROMPT  &&APPLICATION_NAME deployment complete
