@@ -102,6 +102,43 @@ Applications may then:
 
 ---
 
+## Deployment Provenance Workflow
+
+Deployment manifests may receive the full 40-character git commit hash
+associated with the application source being deployed.
+
+One common workflow is:
+
+1. Generate an `env.sql` file containing SQL*Plus substitution variables
+   for each application/repository.
+2. Load `env.sql` from the top-level deployment wrapper.
+3. Pass the appropriate commit hash into each application deployment
+   manifest.
+4. Store that hash using `pkg_application.begin_deployment_p`.
+
+Example generated `env.sql`:
+
+```sql
+DEFINE CORE = 22058236147ab4a644e68faee4e28f176580a26a
+DEFINE UTL_METADATA_SCRIPT = 08aa01ccac28672208c012cc0b13bae6a91b778b
+```
+
+Example wrapper usage:
+
+```sql
+@./env.sql
+
+--example only - core should be installed first
+@../core/Deployment_Manifests/deploy.core.full.sql &CORE
+@../utl_metadata_script/Deployment_Manifests/deploy.full.sql &UTL_METADATA_SCRIPT
+```
+
+This allows the deployment registry to track not only which semantic
+version of an application is installed, but the exact source commit that
+produced the deployed database objects.
+
+---
+
 ## Uninstalling core
 
 This repository includes:
