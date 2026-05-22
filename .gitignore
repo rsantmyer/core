@@ -1,0 +1,17 @@
+# Maven build output
+target/
+
+# IDE/editor project files
+.idea/
+.vscode/
+*.iml
+
+# Local assistant/tooling metadata
+.claude/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
