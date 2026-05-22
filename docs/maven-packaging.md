@@ -27,6 +27,35 @@ target/core-0.1.0-SNAPSHOT.zip
 
 The project uses `pom` packaging because Maven is serving as a metadata and distribution tool. There is no Java compile step.
 
+## Build Metadata
+
+The Maven build generates a filtered properties file and packages it inside the ZIP at:
+
+```text
+META-INF/core-build.properties
+```
+
+Example contents:
+
+```properties
+artifact.groupId=com.512itconsulting.database
+artifact.artifactId=core
+artifact.version=0.1.0-SNAPSHOT
+git.commit.id=5af0af4c86abef934e10e76744fcc05854dc580d
+git.commit.id.abbrev=5af0af4
+git.branch=main
+git.dirty=true
+build.time=2026-05-22T15:30:00Z
+```
+
+The Git values are generated dynamically from the current repository state by `git-commit-id-maven-plugin`. Maven resource filtering then combines those Git values with artifact values from `pom.xml`; `build.time` comes from Maven's build timestamp.
+
+This supports deployment traceability without embedding Git hashes into the Maven version string. Deployment tooling can inspect the ZIP and record exactly which artifact coordinates and Git commit produced a deployed database state. Later, this metadata may be injected into `deploy_wrapper.sql` or loaded into deployment audit tables so Oracle deployments can be tied back to the source commit that produced them.
+
+The `git.dirty` value is included as an additional traceability guard. A value of `true` means the artifact was built with uncommitted working-tree changes, so the commit hash alone does not fully describe the source content. Future release or deployment automation may choose to reject dirty builds.
+
+The plugin first writes Git metadata under `target/generated-git/`. The Maven Resources Plugin then uses that file as a filter and creates the final metadata file under `target/generated-build-metadata/`. The assembly descriptor places the resolved file at `META-INF/core-build.properties` inside the final ZIP. The template file under `assembly/` is excluded from the ZIP so the artifact contains resolved metadata rather than unresolved Maven placeholders.
+
 ## Publishing To GitHub Packages
 
 The `pom.xml` publishes to GitHub Packages using this repository URL:

@@ -21,6 +21,7 @@
                 <exclude>.git/**</exclude>
                 <exclude>.github/**</exclude>
                 <exclude>.claude/**</exclude>
+                <exclude>assembly/core-build.properties</exclude>
                 <exclude>target/**</exclude>
                 <exclude>.idea/**</exclude>
                 <exclude>.vscode/**</exclude>
@@ -33,4 +34,12 @@
             </excludes>
         </fileSet>
     </fileSets>
+
+    <files>
+        <file>
+            <source>${project.build.directory}/generated-build-metadata/META-INF/core-build.properties</source>
+            <outputDirectory>META-INF</outputDirectory>
+            <destName>core-build.properties</destName>
+        </file>
+    </files>
 </assembly>
