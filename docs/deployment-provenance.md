@@ -112,6 +112,7 @@ A deployment should record not only:
 
 but also:
 - the exact git commit hash associated with the deployed source state
+- the exact artifact URI, checksum, package coordinate, and build metadata
 
 This allows:
 - reproducible deployments
@@ -227,6 +228,24 @@ This records:
 - exact source provenance
 
 inside the deployment registry.
+
+For artifact-managed deployments, deployment tooling can call
+`pkg_application.begin_artifact_deployment_p` instead. This keeps the
+manual `begin_deployment_p` call small while allowing dbpm or other
+orchestration tools to record the exact artifact that was resolved,
+verified, and deployed.
+
+Typical artifact provenance includes:
+- artifact URI or local path
+- artifact checksum and checksum algorithm
+- exact ZIP file name
+- package repository coordinate
+- source repository and commit
+- build id, build URL, build time, and JSON build metadata
+
+Core records this in `APP_DEPLOY_PROVENANCE`; dbpm remains responsible
+for resolving the artifact, verifying its checksum, and passing the
+resolved values into Core.
 
 ---
 

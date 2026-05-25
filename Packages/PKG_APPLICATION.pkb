@@ -325,6 +325,117 @@ END begin_deployment_p;
 
 
 
+PROCEDURE begin_artifact_deployment_p
+                           ( ip_application_name          IN application.application_name%TYPE
+                           , ip_major_version             IN application.major_version%TYPE
+                           , ip_minor_version             IN application.minor_version%TYPE
+                           , ip_patch_version             IN application.patch_version%TYPE
+                           , ip_deployment_type           IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
+                           , ip_deploy_commit_hash        IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
+                           , ip_artifact_uri              IN app_deploy_provenance.artifact_uri%TYPE DEFAULT NULL
+                           , ip_artifact_checksum         IN app_deploy_provenance.artifact_checksum%TYPE DEFAULT NULL
+                           , ip_artifact_checksum_alg     IN app_deploy_provenance.artifact_checksum_alg%TYPE DEFAULT 'SHA-256'
+                           , ip_artifact_file_name        IN app_deploy_provenance.artifact_file_name%TYPE DEFAULT NULL
+                           , ip_artifact_repository_type  IN app_deploy_provenance.artifact_repository_type%TYPE DEFAULT NULL
+                           , ip_artifact_group_id         IN app_deploy_provenance.artifact_group_id%TYPE DEFAULT NULL
+                           , ip_artifact_id               IN app_deploy_provenance.artifact_id%TYPE DEFAULT NULL
+                           , ip_artifact_version          IN app_deploy_provenance.artifact_version%TYPE DEFAULT NULL
+                           , ip_artifact_classifier       IN app_deploy_provenance.artifact_classifier%TYPE DEFAULT NULL
+                           , ip_artifact_extension        IN app_deploy_provenance.artifact_extension%TYPE DEFAULT NULL
+                           , ip_package_coordinate        IN app_deploy_provenance.package_coordinate%TYPE DEFAULT NULL
+                           , ip_source_repository_url     IN app_deploy_provenance.source_repository_url%TYPE DEFAULT NULL
+                           , ip_source_commit_hash        IN app_deploy_provenance.source_commit_hash%TYPE DEFAULT NULL
+                           , ip_source_path               IN app_deploy_provenance.source_path%TYPE DEFAULT NULL
+                           , ip_build_id                  IN app_deploy_provenance.build_id%TYPE DEFAULT NULL
+                           , ip_build_url                 IN app_deploy_provenance.build_url%TYPE DEFAULT NULL
+                           , ip_build_time                IN app_deploy_provenance.build_time%TYPE DEFAULT NULL
+                           , ip_build_metadata_json       IN app_deploy_provenance.build_metadata_json%TYPE DEFAULT NULL
+                           , ip_redeploy_okay             IN BOOLEAN DEFAULT FALSE
+                           , ip_notes                     IN app_deploy_notes.notes%TYPE DEFAULT NULL
+                           )
+IS
+   rec_application application%ROWTYPE;
+BEGIN
+   begin_deployment_p
+      ( ip_application_name   => ip_application_name
+      , ip_major_version      => ip_major_version
+      , ip_minor_version      => ip_minor_version
+      , ip_patch_version      => ip_patch_version
+      , ip_deployment_type    => ip_deployment_type
+      , ip_deploy_commit_hash => ip_deploy_commit_hash
+      , ip_redeploy_okay      => ip_redeploy_okay
+      , ip_notes              => ip_notes
+      );
+
+   get_application_rec_p( ip_application_name => ip_application_name
+                        , op_rec_application  => rec_application );
+
+   DELETE
+     FROM app_deploy_provenance
+    WHERE application_name = ip_application_name
+      AND deploy_begin = rec_application.deploy_begin;
+
+   INSERT
+     INTO app_deploy_provenance
+        ( application_name
+        , major_version
+        , minor_version
+        , patch_version
+        , deploy_type
+        , deploy_commit_hash
+        , deploy_begin
+        , artifact_uri
+        , artifact_checksum
+        , artifact_checksum_alg
+        , artifact_file_name
+        , artifact_repository_type
+        , artifact_group_id
+        , artifact_id
+        , artifact_version
+        , artifact_classifier
+        , artifact_extension
+        , package_coordinate
+        , source_repository_url
+        , source_commit_hash
+        , source_path
+        , build_id
+        , build_url
+        , build_time
+        , build_metadata_json
+        )
+   VALUES
+        ( ip_application_name
+        , rec_application.major_version
+        , rec_application.minor_version
+        , rec_application.patch_version
+        , rec_application.deploy_type
+        , rec_application.deploy_commit_hash
+        , rec_application.deploy_begin
+        , ip_artifact_uri
+        , ip_artifact_checksum
+        , ip_artifact_checksum_alg
+        , ip_artifact_file_name
+        , ip_artifact_repository_type
+        , ip_artifact_group_id
+        , ip_artifact_id
+        , ip_artifact_version
+        , ip_artifact_classifier
+        , ip_artifact_extension
+        , ip_package_coordinate
+        , ip_source_repository_url
+        , NVL(ip_source_commit_hash, ip_deploy_commit_hash)
+        , ip_source_path
+        , ip_build_id
+        , ip_build_url
+        , ip_build_time
+        , ip_build_metadata_json
+        );
+
+   COMMIT;
+END begin_artifact_deployment_p;
+
+
+
 PROCEDURE set_deploy_notes_p( ip_application_name IN application.application_name%TYPE
                             , ip_notes            IN app_deploy_notes.notes%TYPE)
 IS

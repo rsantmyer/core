@@ -1,0 +1,69 @@
+CREATE TABLE APP_DEPLOY_PROVENANCE
+(
+  APPLICATION_NAME          VARCHAR2(30)   NOT NULL
+, MAJOR_VERSION             INTEGER        NOT NULL
+, MINOR_VERSION             INTEGER        NOT NULL
+, PATCH_VERSION             INTEGER        NOT NULL
+, DEPLOY_TYPE               VARCHAR2(1)
+, DEPLOY_COMMIT_HASH        VARCHAR2(40)
+, DEPLOY_BEGIN              DATE           NOT NULL
+, ARTIFACT_URI              VARCHAR2(4000)
+, ARTIFACT_CHECKSUM         VARCHAR2(128)
+, ARTIFACT_CHECKSUM_ALG     VARCHAR2(30)
+, ARTIFACT_FILE_NAME        VARCHAR2(512)
+, ARTIFACT_REPOSITORY_TYPE  VARCHAR2(30)
+, ARTIFACT_GROUP_ID         VARCHAR2(255)
+, ARTIFACT_ID               VARCHAR2(255)
+, ARTIFACT_VERSION          VARCHAR2(255)
+, ARTIFACT_CLASSIFIER       VARCHAR2(255)
+, ARTIFACT_EXTENSION        VARCHAR2(30)
+, PACKAGE_COORDINATE        VARCHAR2(1000)
+, SOURCE_REPOSITORY_URL     VARCHAR2(4000)
+, SOURCE_COMMIT_HASH        VARCHAR2(40)
+, SOURCE_PATH               VARCHAR2(4000)
+, BUILD_ID                  VARCHAR2(255)
+, BUILD_URL                 VARCHAR2(4000)
+, BUILD_TIME                VARCHAR2(64)
+, BUILD_METADATA_JSON       CLOB
+, RECORD_TS                 DATE           DEFAULT SYSDATE NOT NULL
+, CONSTRAINT APP_DEPLOY_PROVENANCE_FK1
+      FOREIGN KEY (APPLICATION_NAME)
+         REFERENCES APPLICATION (APPLICATION_NAME)
+         ON DELETE CASCADE
+, CONSTRAINT APP_DEPLOY_PROVENANCE_CK1
+      CHECK (APPLICATION_NAME = UPPER(APPLICATION_NAME))
+, CONSTRAINT APP_DEPLOY_PROVENANCE_CK2 CHECK (MAJOR_VERSION >= 0)
+, CONSTRAINT APP_DEPLOY_PROVENANCE_CK3 CHECK (MINOR_VERSION >= 0)
+, CONSTRAINT APP_DEPLOY_PROVENANCE_CK4 CHECK (PATCH_VERSION >= 0)
+, CONSTRAINT APP_DEPLOY_PROVENANCE_CK5 CHECK (DEPLOY_TYPE IN ('I','V', 'M', 'P') )
+)
+;
+
+COMMENT ON TABLE  APP_DEPLOY_PROVENANCE IS 'Records artifact and build provenance for application deployment runs';
+--
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.APPLICATION_NAME         IS 'FK to APPLICATION. Application being deployed';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.MAJOR_VERSION            IS 'Deployed major version';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.MINOR_VERSION            IS 'Deployed minor version';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.PATCH_VERSION            IS 'Deployed patch version';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.DEPLOY_TYPE              IS 'I:Initial; V:major Version, M:Minor, P:Patch';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.DEPLOY_COMMIT_HASH       IS 'Repository commit hash supplied to begin deployment';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.DEPLOY_BEGIN             IS 'Deployment start timestamp from APPLICATION when provenance was recorded';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_URI             IS 'Resolved artifact URL, repository URL, or local path used for deployment';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_CHECKSUM        IS 'Checksum of the exact artifact bytes used for deployment';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_CHECKSUM_ALG    IS 'Checksum algorithm, such as SHA-256';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_FILE_NAME       IS 'Resolved artifact file name, such as the exact ZIP name';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_REPOSITORY_TYPE IS 'Artifact repository type, such as maven, file, github, or manual';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_GROUP_ID        IS 'Package repository group id when available';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_ID              IS 'Package repository artifact id when available';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_VERSION         IS 'Package repository artifact version when available';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_CLASSIFIER      IS 'Package repository classifier when available';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.ARTIFACT_EXTENSION       IS 'Package repository extension when available';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.PACKAGE_COORDINATE       IS 'Resolved package coordinate as provided by deployment tooling';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.SOURCE_REPOSITORY_URL    IS 'Source repository URL associated with the artifact';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.SOURCE_COMMIT_HASH       IS 'Source commit hash associated with the artifact';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.SOURCE_PATH              IS 'Optional local source path used by the deployment tool';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.BUILD_ID                 IS 'External build identifier';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.BUILD_URL                IS 'External build URL';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.BUILD_TIME               IS 'External build timestamp as provided by the artifact or deployment tool';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.BUILD_METADATA_JSON      IS 'Free-form build metadata captured as JSON text';
+COMMENT ON COLUMN APP_DEPLOY_PROVENANCE.RECORD_TS                IS 'Timestamp when provenance was recorded';

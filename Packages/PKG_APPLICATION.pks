@@ -70,11 +70,39 @@ AS
    , dml_override_proc         app_object_metadata.dml_override_proc%TYPE
    )
    ;
+   TYPE t_deploy_provenance IS RECORD
+   ( application_name          app_deploy_provenance.application_name%TYPE
+   , major_version             app_deploy_provenance.major_version%TYPE
+   , minor_version             app_deploy_provenance.minor_version%TYPE
+   , patch_version             app_deploy_provenance.patch_version%TYPE
+   , deploy_type               app_deploy_provenance.deploy_type%TYPE
+   , deploy_commit_hash        app_deploy_provenance.deploy_commit_hash%TYPE
+   , deploy_begin              app_deploy_provenance.deploy_begin%TYPE
+   , artifact_uri              app_deploy_provenance.artifact_uri%TYPE
+   , artifact_checksum         app_deploy_provenance.artifact_checksum%TYPE
+   , artifact_checksum_alg     app_deploy_provenance.artifact_checksum_alg%TYPE
+   , artifact_file_name        app_deploy_provenance.artifact_file_name%TYPE
+   , artifact_repository_type  app_deploy_provenance.artifact_repository_type%TYPE
+   , artifact_group_id         app_deploy_provenance.artifact_group_id%TYPE
+   , artifact_id               app_deploy_provenance.artifact_id%TYPE
+   , artifact_version          app_deploy_provenance.artifact_version%TYPE
+   , artifact_classifier       app_deploy_provenance.artifact_classifier%TYPE
+   , artifact_extension        app_deploy_provenance.artifact_extension%TYPE
+   , package_coordinate        app_deploy_provenance.package_coordinate%TYPE
+   , source_repository_url     app_deploy_provenance.source_repository_url%TYPE
+   , source_commit_hash        app_deploy_provenance.source_commit_hash%TYPE
+   , source_path               app_deploy_provenance.source_path%TYPE
+   , build_id                  app_deploy_provenance.build_id%TYPE
+   , build_url                 app_deploy_provenance.build_url%TYPE
+   , build_time                app_deploy_provenance.build_time%TYPE
+   , build_metadata_json       app_deploy_provenance.build_metadata_json%TYPE
+   )
+   ;
 --------------------------------------------------------------------------------
    --PACKAGE CONSTANTS
    --
    --APPLICATION.version
-   c_core_major_version       CONSTANT APPLICATION.major_version%TYPE     := 2;
+   c_core_major_version       CONSTANT APPLICATION.major_version%TYPE     := 3;
    c_version_default_major    CONSTANT APPLICATION.major_version%TYPE     := 0;
    c_version_default_minor    CONSTANT APPLICATION.minor_version%TYPE     := 1;
    c_version_default_patch    CONSTANT APPLICATION.patch_version%TYPE     := 0;
@@ -193,6 +221,52 @@ AS
                                , ip_redeploy_okay      IN BOOLEAN DEFAULT FALSE
                                , ip_notes              IN app_deploy_notes.notes%TYPE DEFAULT NULL
                                );
+/**
+ * @description Starts a deployment run and records artifact/build provenance for
+ * deployment tooling such as dbpm. Manual deployment scripts can continue using
+ * begin_deployment_p without supplying artifact metadata.
+ * @param ip_application_name Application being deployed.
+ * @param ip_major_version Target major version.
+ * @param ip_minor_version Target minor version.
+ * @param ip_patch_version Target patch version.
+ * @param ip_deployment_type Initial, major, minor, or patch deployment type constant.
+ * @param ip_deploy_commit_hash Source control commit associated with the deployment.
+ * @param ip_artifact_uri Resolved artifact URL, repository URL, or local path.
+ * @param ip_artifact_checksum Checksum of the exact artifact bytes deployed.
+ * @param ip_artifact_checksum_alg Checksum algorithm, such as SHA-256.
+ * @param ip_package_coordinate Resolved package coordinate from deployment tooling.
+ * @param ip_build_metadata_json Free-form build metadata captured as JSON text.
+ * @param ip_redeploy_okay TRUE allows re-running an already deployed version.
+ * @param ip_notes Optional deployment notes.
+ */
+   PROCEDURE begin_artifact_deployment_p
+                              ( ip_application_name          IN application.application_name%TYPE
+                              , ip_major_version             IN application.major_version%TYPE
+                              , ip_minor_version             IN application.minor_version%TYPE
+                              , ip_patch_version             IN application.patch_version%TYPE
+                              , ip_deployment_type           IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
+                              , ip_deploy_commit_hash        IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
+                              , ip_artifact_uri              IN app_deploy_provenance.artifact_uri%TYPE DEFAULT NULL
+                              , ip_artifact_checksum         IN app_deploy_provenance.artifact_checksum%TYPE DEFAULT NULL
+                              , ip_artifact_checksum_alg     IN app_deploy_provenance.artifact_checksum_alg%TYPE DEFAULT 'SHA-256'
+                              , ip_artifact_file_name        IN app_deploy_provenance.artifact_file_name%TYPE DEFAULT NULL
+                              , ip_artifact_repository_type  IN app_deploy_provenance.artifact_repository_type%TYPE DEFAULT NULL
+                              , ip_artifact_group_id         IN app_deploy_provenance.artifact_group_id%TYPE DEFAULT NULL
+                              , ip_artifact_id               IN app_deploy_provenance.artifact_id%TYPE DEFAULT NULL
+                              , ip_artifact_version          IN app_deploy_provenance.artifact_version%TYPE DEFAULT NULL
+                              , ip_artifact_classifier       IN app_deploy_provenance.artifact_classifier%TYPE DEFAULT NULL
+                              , ip_artifact_extension        IN app_deploy_provenance.artifact_extension%TYPE DEFAULT NULL
+                              , ip_package_coordinate        IN app_deploy_provenance.package_coordinate%TYPE DEFAULT NULL
+                              , ip_source_repository_url     IN app_deploy_provenance.source_repository_url%TYPE DEFAULT NULL
+                              , ip_source_commit_hash        IN app_deploy_provenance.source_commit_hash%TYPE DEFAULT NULL
+                              , ip_source_path               IN app_deploy_provenance.source_path%TYPE DEFAULT NULL
+                              , ip_build_id                  IN app_deploy_provenance.build_id%TYPE DEFAULT NULL
+                              , ip_build_url                 IN app_deploy_provenance.build_url%TYPE DEFAULT NULL
+                              , ip_build_time                IN app_deploy_provenance.build_time%TYPE DEFAULT NULL
+                              , ip_build_metadata_json       IN app_deploy_provenance.build_metadata_json%TYPE DEFAULT NULL
+                              , ip_redeploy_okay             IN BOOLEAN DEFAULT FALSE
+                              , ip_notes                     IN app_deploy_notes.notes%TYPE DEFAULT NULL
+                              );
 /**
  * @description Stores free-form deployment notes for the current deployment.
  * @param ip_application_name Application whose deployment notes should be updated.

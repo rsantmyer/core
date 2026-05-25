@@ -1,7 +1,7 @@
 SET DEFINE ON
 DEFINE APPLICATION_NAME = 'CORE'
 DEFINE DEPLOY_VERSION_MAJOR = '3'
-DEFINE DEPLOY_VERSION_MINOR = '0'
+DEFINE DEPLOY_VERSION_MINOR = '1'
 DEFINE DEPLOY_VERSION_PATCH = '0'
 DEFINE DEPLOY_COMMIT_HASH = '&&1'
 
@@ -69,6 +69,7 @@ Prompt Creating Tables
 @@../Tables/APP_SYS_PRIVS.sql    --Depends on: APPLICATION
 @@../Tables/APP_OBJECT_METADATA.sql --Depends on: APP_OBJECTS
 @@../Tables/APP_DEPLOY_HIST.sql
+@@../Tables/APP_DEPLOY_PROVENANCE.sql --Depends on: APPLICATION
 @@../Tables/APP_DICTIONARY.sql
 @@../Tables/SYSTEM_LOG.sql
 @@../Tables/TRACE_LOG.sql
@@ -117,6 +118,9 @@ BEGIN
       --, ip_redeploy_curr_okay => TRUE
       , ip_notes => 
 Q'{
+3.1.0
+* Add APP_DEPLOY_PROVENANCE
+* Add pkg_application.begin_artifact_deployment_p
 3.0.0
 * Add table SYSTEM_LOG
 * Add PKG_SYSLOG
@@ -159,6 +163,7 @@ EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', i
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_SYS_PRIVS'    , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APPLICATION'      , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPLOY_HIST'      , ip_object_type => pkg_application.c_object_type_table);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPLOY_PROVENANCE', ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DICTIONARY'      , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'SYSTEM_LOG'        , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'TRACE_LOG'      , ip_object_type => pkg_application.c_object_type_table);
