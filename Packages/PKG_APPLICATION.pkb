@@ -456,8 +456,8 @@ BEGIN
       SET is_valid         = CASE ( SELECT COUNT(*) 
                                       FROM application 
                                      WHERE application.application_name = app_dependency.depends_on
-                                       AND TO_NUMBER(application.major_version||'.'||application.minor_version) BETWEEN app_dependency.version_min
-                                                                                                                    AND app_dependency.version_max
+                                       AND serialize_version_f(application.major_version||'.'||application.minor_version||'.'||application.patch_version) BETWEEN app_dependency.version_min
+                                                                                                                                                             AND app_dependency.version_max
                                   ) WHEN 0 THEN c_valid_no ELSE c_valid_yes END
         , last_validated   = SYSDATE
     WHERE application_name = ip_application_name;

@@ -96,7 +96,7 @@ AS
    c_valid_no                 CONSTANT APP_DEPENDENCY.is_valid%TYPE   := 'N';
    --APP_DEPENDENCY.version_min
    c_version_min_any          CONSTANT APP_DEPENDENCY.version_min%TYPE := 0;
-   c_version_max_any          CONSTANT APP_DEPENDENCY.version_max%TYPE := 999999;
+   c_version_max_any          CONSTANT APP_DEPENDENCY.version_max%TYPE := 999999999999;
    --APP_OBJECT_TYPE.object_type%TYPE
    c_object_type_table        CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'TABLE';
    c_object_type_sequence     CONSTANT APP_OBJECT_TYPE.object_type%TYPE := 'SEQUENCE';
