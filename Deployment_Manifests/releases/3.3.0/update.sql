@@ -64,3 +64,4 @@ EXEC pkg_application.set_deployment_complete_p(ip_application_name => '&&APPLICA
 PROMPT &&APPLICATION_NAME update complete
 
 SPOOL OFF
+EXIT SUCCESS

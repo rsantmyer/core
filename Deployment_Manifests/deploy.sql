@@ -202,4 +202,4 @@ EXEC pkg_application.set_deployment_complete_p(ip_application_name => '&&APPLICA
 PROMPT  &&APPLICATION_NAME deployment complete
 
 SPOOL OFF
-
+EXIT SUCCESS
