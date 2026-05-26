@@ -70,6 +70,7 @@ Prompt Creating Tables
 @@../Tables/APP_OBJECT_METADATA.sql --Depends on: APP_OBJECTS
 @@../Tables/APP_DEPLOY_HIST.sql
 @@../Tables/APP_DEPLOY_PROVENANCE.sql --Depends on: APPLICATION
+@@../Tables/APP_DEPLOY_PROVENANCE_PENDING.sql
 @@../Tables/APP_DICTIONARY.sql
 @@../Tables/SYSTEM_LOG.sql
 @@../Tables/TRACE_LOG.sql
@@ -120,6 +121,8 @@ BEGIN
 Q'{
 3.1.0
 * Add APP_DEPLOY_PROVENANCE
+* Add APP_DEPLOY_PROVENANCE_PENDING
+* Add pkg_application.stage_deployment_provenance_p
 * Add pkg_application.begin_artifact_deployment_p
 3.0.0
 * Add table SYSTEM_LOG
@@ -164,6 +167,7 @@ EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', i
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APPLICATION'      , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPLOY_HIST'      , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPLOY_PROVENANCE', ip_object_type => pkg_application.c_object_type_table);
+EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DEPLOY_PROVENANCE_PENDING', ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'APP_DICTIONARY'      , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'SYSTEM_LOG'        , ip_object_type => pkg_application.c_object_type_table);
 EXEC pkg_application.add_object_p(ip_application_name => '&&APPLICATION_NAME', ip_object_name => 'TRACE_LOG'      , ip_object_type => pkg_application.c_object_type_table);

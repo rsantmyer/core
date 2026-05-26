@@ -229,11 +229,33 @@ This records:
 
 inside the deployment registry.
 
-For artifact-managed deployments, deployment tooling can call
-`pkg_application.begin_artifact_deployment_p` instead. This keeps the
-manual `begin_deployment_p` call small while allowing dbpm or other
-orchestration tools to record the exact artifact that was resolved,
-verified, and deployed.
+For artifact-managed deployments, deployment tooling can stage provenance
+before running the normal deployment manifest:
+
+```sql
+BEGIN
+    pkg_application.stage_deployment_provenance_p(
+        ip_application_name      => 'CORE',
+        ip_major_version         => 1,
+        ip_minor_version         => 0,
+        ip_patch_version         => 0,
+        ip_deploy_commit_hash    => '&GIT_COMMIT_HASH',
+        ip_artifact_uri          => '&ARTIFACT_URI',
+        ip_artifact_checksum     => '&ARTIFACT_CHECKSUM',
+        ip_package_coordinate    => '&PACKAGE_COORDINATE'
+    );
+END;
+/
+```
+
+The deployment manifest can then call the same `begin_deployment_p` used
+for manual deployments. If matching staged provenance exists in
+`APP_DEPLOY_PROVENANCE_PENDING`, Core consumes it and records the final
+deployment provenance in `APP_DEPLOY_PROVENANCE`.
+
+Tooling that wants a single API call can still call
+`pkg_application.begin_artifact_deployment_p`, which starts the deployment
+and records provenance together.
 
 Typical artifact provenance includes:
 - artifact URI or local path
@@ -243,9 +265,9 @@ Typical artifact provenance includes:
 - source repository and commit
 - build id, build URL, build time, and JSON build metadata
 
-Core records this in `APP_DEPLOY_PROVENANCE`; dbpm remains responsible
-for resolving the artifact, verifying its checksum, and passing the
-resolved values into Core.
+Core records completed deployment provenance in `APP_DEPLOY_PROVENANCE`;
+dbpm remains responsible for resolving the artifact, verifying its
+checksum, and passing the resolved values into Core.
 
 ---
 
