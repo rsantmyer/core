@@ -1,0 +1,16 @@
+package:
+  name: core
+  version: "3.3.0"
+  description: Oracle deployment metadata and lifecycle substrate
+  vendor: rsantmyer
+  license: Apache-2.0
+
+database:
+  platform: oracle
+  minimum_version: "19c"
+
+dependencies: []
+
+scripts:
+  install: Deployment_Manifests/deploy.sql
+  upgrade: Deployment_Manifests/update.sql

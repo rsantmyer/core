@@ -238,6 +238,68 @@ END get_current_version_f;
 
 
 
+FUNCTION get_deployment_provenance_json_f
+   ( ip_application_name IN application.application_name%TYPE
+   , ip_major_version    IN application.major_version%TYPE DEFAULT NULL
+   , ip_minor_version    IN application.minor_version%TYPE DEFAULT NULL
+   , ip_patch_version    IN application.patch_version%TYPE DEFAULT NULL
+   )
+   RETURN CLOB
+IS
+   l_retvar CLOB;
+BEGIN
+   SELECT JSON_OBJECT
+          ( 'application_name'          VALUE application_name
+          , 'major_version'             VALUE major_version
+          , 'minor_version'             VALUE minor_version
+          , 'patch_version'             VALUE patch_version
+          , 'deploy_type'               VALUE deploy_type
+          , 'deploy_commit_hash'        VALUE deploy_commit_hash
+          , 'deploy_begin'              VALUE TO_CHAR(deploy_begin, 'YYYY-MM-DD"T"HH24:MI:SS')
+          , 'artifact_uri'              VALUE artifact_uri
+          , 'artifact_checksum'         VALUE artifact_checksum
+          , 'artifact_checksum_alg'     VALUE artifact_checksum_alg
+          , 'artifact_file_name'        VALUE artifact_file_name
+          , 'artifact_repository_type'  VALUE artifact_repository_type
+          , 'artifact_group_id'         VALUE artifact_group_id
+          , 'artifact_id'               VALUE artifact_id
+          , 'artifact_version'          VALUE artifact_version
+          , 'artifact_classifier'       VALUE artifact_classifier
+          , 'artifact_extension'        VALUE artifact_extension
+          , 'package_coordinate'        VALUE package_coordinate
+          , 'source_repository_url'     VALUE source_repository_url
+          , 'source_commit_hash'        VALUE source_commit_hash
+          , 'source_path'               VALUE source_path
+          , 'build_id'                  VALUE build_id
+          , 'build_url'                 VALUE build_url
+          , 'build_time'                VALUE build_time
+          , 'build_metadata_json'       VALUE DBMS_LOB.SUBSTR(build_metadata_json, 4000, 1)
+          , 'record_ts'                 VALUE TO_CHAR(record_ts, 'YYYY-MM-DD"T"HH24:MI:SS')
+          RETURNING CLOB
+          )
+     INTO l_retvar
+     FROM
+          (
+            SELECT *
+              FROM app_deploy_provenance
+             WHERE application_name = UPPER(ip_application_name)
+               AND (ip_major_version IS NULL OR major_version = ip_major_version)
+               AND (ip_minor_version IS NULL OR minor_version = ip_minor_version)
+               AND (ip_patch_version IS NULL OR patch_version = ip_patch_version)
+             ORDER
+                BY deploy_begin DESC
+                 , record_ts DESC
+          )
+    WHERE ROWNUM = 1;
+
+   RETURN l_retvar;
+EXCEPTION
+   WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+END get_deployment_provenance_json_f;
+
+
+
 FUNCTION serialize_version_f(ip_version IN VARCHAR)
    RETURN INTEGER
 IS

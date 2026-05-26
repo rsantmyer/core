@@ -1,7 +1,7 @@
 SET DEFINE ON
 DEFINE APPLICATION_NAME = 'CORE'
 DEFINE DEPLOY_VERSION_MAJOR = '3'
-DEFINE DEPLOY_VERSION_MINOR = '2'
+DEFINE DEPLOY_VERSION_MINOR = '3'
 DEFINE DEPLOY_VERSION_PATCH = '0'
 DEFINE DEPLOY_COMMIT_HASH = '&&1'
 
@@ -119,6 +119,8 @@ BEGIN
       --, ip_redeploy_curr_okay => TRUE
       , ip_notes => 
 Q'{
+3.3.0
+* Add pkg_application.get_deployment_provenance_json_f
 3.2.0
 * Add APP_DEPLOY_PROVENANCE_PENDING
 * Add pkg_application.stage_deployment_provenance_p

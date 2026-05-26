@@ -150,6 +150,24 @@ AS
       RETURN VARCHAR;
 
 /**
+ * @description Returns the most recent deployment provenance row for an application
+ * as JSON. Optional semantic-version parameters restrict the lookup to a specific
+ * deployed version. Returns NULL when no matching provenance row exists.
+ * @param ip_application_name Application to inspect.
+ * @param ip_major_version Optional major version filter.
+ * @param ip_minor_version Optional minor version filter.
+ * @param ip_patch_version Optional patch version filter.
+ * @return Deployment provenance JSON.
+ */
+   FUNCTION get_deployment_provenance_json_f
+      ( ip_application_name IN application.application_name%TYPE
+      , ip_major_version    IN application.major_version%TYPE DEFAULT NULL
+      , ip_minor_version    IN application.minor_version%TYPE DEFAULT NULL
+      , ip_patch_version    IN application.patch_version%TYPE DEFAULT NULL
+      )
+      RETURN CLOB;
+
+/**
  * @description Converts a major.minor.patch version string into a sortable integer
  * in MMMMIIIIPPPP format. This allows version ranges to be compared numerically.
  * @param ip_version Semantic version string, such as '1.2.3'.
