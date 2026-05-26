@@ -1,7 +1,7 @@
 SET DEFINE ON
 DEFINE APPLICATION_NAME = 'CORE'
 DEFINE DEPLOY_VERSION_MAJOR = '3'
-DEFINE DEPLOY_VERSION_MINOR = '1'
+DEFINE DEPLOY_VERSION_MINOR = '2'
 DEFINE DEPLOY_VERSION_PATCH = '0'
 DEFINE DEPLOY_COMMIT_HASH = '&&1'
 
@@ -119,10 +119,12 @@ BEGIN
       --, ip_redeploy_curr_okay => TRUE
       , ip_notes => 
 Q'{
-3.1.0
-* Add APP_DEPLOY_PROVENANCE
+3.2.0
 * Add APP_DEPLOY_PROVENANCE_PENDING
 * Add pkg_application.stage_deployment_provenance_p
+* Consume pending deployment provenance from pkg_application.begin_deployment_p
+3.1.0
+* Add APP_DEPLOY_PROVENANCE
 * Add pkg_application.begin_artifact_deployment_p
 3.0.0
 * Add table SYSTEM_LOG
