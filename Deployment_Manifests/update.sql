@@ -5,3 +5,4 @@ WHENEVER SQLERROR EXIT FAILURE
 WHENEVER OSERROR EXIT FAILURE
 
 @@releases/3.3.0/update.sql &&1
+@@releases/3.4.0/update.sql &&1

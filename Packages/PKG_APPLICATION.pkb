@@ -54,6 +54,38 @@ END arch_application_rec_P;
 
 
 
+FUNCTION same_varchar_f( ip_left IN VARCHAR2
+                       , ip_right IN VARCHAR2 )
+   RETURN BOOLEAN
+IS
+BEGIN
+   IF ip_left IS NULL AND ip_right IS NULL THEN
+      RETURN TRUE;
+   ELSIF ip_left IS NULL OR ip_right IS NULL THEN
+      RETURN FALSE;
+   ELSE
+      RETURN ip_left = ip_right;
+   END IF;
+END same_varchar_f;
+
+
+
+FUNCTION same_clob_f( ip_left IN CLOB
+                    , ip_right IN CLOB )
+   RETURN BOOLEAN
+IS
+BEGIN
+   IF ip_left IS NULL AND ip_right IS NULL THEN
+      RETURN TRUE;
+   ELSIF ip_left IS NULL OR ip_right IS NULL THEN
+      RETURN FALSE;
+   ELSE
+      RETURN DBMS_LOB.COMPARE(ip_left, ip_right) = 0;
+   END IF;
+END same_clob_f;
+
+
+
 PROCEDURE record_deploy_provenance_p
                            ( ip_rec_application          IN application%ROWTYPE
                            , ip_artifact_uri             IN app_deploy_provenance.artifact_uri%TYPE DEFAULT NULL
@@ -74,13 +106,65 @@ PROCEDURE record_deploy_provenance_p
                            , ip_build_url                IN app_deploy_provenance.build_url%TYPE DEFAULT NULL
                            , ip_build_time               IN app_deploy_provenance.build_time%TYPE DEFAULT NULL
                            , ip_build_metadata_json      IN app_deploy_provenance.build_metadata_json%TYPE DEFAULT NULL
+                           , ip_replace_existing         IN BOOLEAN DEFAULT TRUE
                            )
 IS
+   rec_provenance      app_deploy_provenance%ROWTYPE;
+   l_exists            BOOLEAN := FALSE;
+   l_source_commit_hash app_deploy_provenance.source_commit_hash%TYPE;
+   l_same              BOOLEAN;
 BEGIN
-   DELETE
-     FROM app_deploy_provenance
-    WHERE application_name = ip_rec_application.application_name
-      AND deploy_begin = ip_rec_application.deploy_begin;
+   l_source_commit_hash := NVL(ip_source_commit_hash, ip_rec_application.deploy_commit_hash);
+
+   BEGIN
+      SELECT *
+        INTO rec_provenance
+        FROM app_deploy_provenance
+       WHERE application_name = ip_rec_application.application_name
+         AND deploy_begin = ip_rec_application.deploy_begin;
+
+      l_exists := TRUE;
+   EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+         l_exists := FALSE;
+   END;
+
+   IF l_exists THEN
+      l_same := same_varchar_f(rec_provenance.artifact_uri, ip_artifact_uri)
+            AND same_varchar_f(rec_provenance.artifact_checksum, ip_artifact_checksum)
+            AND same_varchar_f(rec_provenance.artifact_checksum_alg, ip_artifact_checksum_alg)
+            AND same_varchar_f(rec_provenance.artifact_file_name, ip_artifact_file_name)
+            AND same_varchar_f(rec_provenance.artifact_repository_type, ip_artifact_repository_type)
+            AND same_varchar_f(rec_provenance.artifact_group_id, ip_artifact_group_id)
+            AND same_varchar_f(rec_provenance.artifact_id, ip_artifact_id)
+            AND same_varchar_f(rec_provenance.artifact_version, ip_artifact_version)
+            AND same_varchar_f(rec_provenance.artifact_classifier, ip_artifact_classifier)
+            AND same_varchar_f(rec_provenance.artifact_extension, ip_artifact_extension)
+            AND same_varchar_f(rec_provenance.package_coordinate, ip_package_coordinate)
+            AND same_varchar_f(rec_provenance.source_repository_url, ip_source_repository_url)
+            AND same_varchar_f(rec_provenance.source_commit_hash, l_source_commit_hash)
+            AND same_varchar_f(rec_provenance.source_path, ip_source_path)
+            AND same_varchar_f(rec_provenance.build_id, ip_build_id)
+            AND same_varchar_f(rec_provenance.build_url, ip_build_url)
+            AND same_varchar_f(rec_provenance.build_time, ip_build_time)
+            AND same_clob_f(rec_provenance.build_metadata_json, ip_build_metadata_json);
+
+      IF l_same THEN
+         GOTO end_now;
+      END IF;
+
+      assert(ip_replace_existing, 'Deployment provenance already exists and differs for '
+                                  ||ip_rec_application.application_name||' '
+                                  ||ip_rec_application.major_version||'.'
+                                  ||ip_rec_application.minor_version||'.'
+                                  ||ip_rec_application.patch_version
+                                  ||' commit '||ip_rec_application.deploy_commit_hash);
+
+      DELETE
+        FROM app_deploy_provenance
+       WHERE application_name = ip_rec_application.application_name
+         AND deploy_begin = ip_rec_application.deploy_begin;
+   END IF;
 
    INSERT
      INTO app_deploy_provenance
@@ -130,13 +214,16 @@ BEGIN
         , ip_artifact_extension
         , ip_package_coordinate
         , ip_source_repository_url
-        , NVL(ip_source_commit_hash, ip_rec_application.deploy_commit_hash)
+        , l_source_commit_hash
         , ip_source_path
         , ip_build_id
         , ip_build_url
         , ip_build_time
         , ip_build_metadata_json
         );
+
+   <<end_now>>
+   NULL;
 
    --calling proc commits
 END record_deploy_provenance_p;
@@ -701,6 +788,161 @@ BEGIN
 
    COMMIT;
 END begin_artifact_deployment_p;
+
+
+
+PROCEDURE record_deployment_provenance_p
+                           ( ip_application_name          IN application.application_name%TYPE
+                           , ip_major_version             IN application.major_version%TYPE
+                           , ip_minor_version             IN application.minor_version%TYPE
+                           , ip_patch_version             IN application.patch_version%TYPE
+                           , ip_deployment_type           IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
+                           , ip_deploy_commit_hash        IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
+                           , ip_artifact_uri              IN app_deploy_provenance.artifact_uri%TYPE DEFAULT NULL
+                           , ip_artifact_checksum         IN app_deploy_provenance.artifact_checksum%TYPE DEFAULT NULL
+                           , ip_artifact_checksum_alg     IN app_deploy_provenance.artifact_checksum_alg%TYPE DEFAULT 'SHA-256'
+                           , ip_artifact_file_name        IN app_deploy_provenance.artifact_file_name%TYPE DEFAULT NULL
+                           , ip_artifact_repository_type  IN app_deploy_provenance.artifact_repository_type%TYPE DEFAULT NULL
+                           , ip_artifact_group_id         IN app_deploy_provenance.artifact_group_id%TYPE DEFAULT NULL
+                           , ip_artifact_id               IN app_deploy_provenance.artifact_id%TYPE DEFAULT NULL
+                           , ip_artifact_version          IN app_deploy_provenance.artifact_version%TYPE DEFAULT NULL
+                           , ip_artifact_classifier       IN app_deploy_provenance.artifact_classifier%TYPE DEFAULT NULL
+                           , ip_artifact_extension        IN app_deploy_provenance.artifact_extension%TYPE DEFAULT NULL
+                           , ip_package_coordinate        IN app_deploy_provenance.package_coordinate%TYPE DEFAULT NULL
+                           , ip_source_repository_url     IN app_deploy_provenance.source_repository_url%TYPE DEFAULT NULL
+                           , ip_source_commit_hash        IN app_deploy_provenance.source_commit_hash%TYPE DEFAULT NULL
+                           , ip_source_path               IN app_deploy_provenance.source_path%TYPE DEFAULT NULL
+                           , ip_build_id                  IN app_deploy_provenance.build_id%TYPE DEFAULT NULL
+                           , ip_build_url                 IN app_deploy_provenance.build_url%TYPE DEFAULT NULL
+                           , ip_build_time                IN app_deploy_provenance.build_time%TYPE DEFAULT NULL
+                           , ip_build_metadata_json       IN app_deploy_provenance.build_metadata_json%TYPE DEFAULT NULL
+                           )
+IS
+   rec_application application%ROWTYPE;
+   l_deploy_count  NUMBER;
+BEGIN
+   assert(ip_application_name = UPPER(ip_application_name));
+
+   SELECT COUNT(*)
+     INTO l_deploy_count
+     FROM
+        (
+          SELECT application_name
+            FROM application
+           WHERE application_name = ip_application_name
+             AND major_version = ip_major_version
+             AND minor_version = ip_minor_version
+             AND patch_version = ip_patch_version
+             AND deploy_type = ip_deployment_type
+             AND deploy_commit_hash = ip_deploy_commit_hash
+             AND deploy_status = c_deploy_status_complete
+          UNION ALL
+          SELECT application_name
+            FROM app_deploy_hist
+           WHERE application_name = ip_application_name
+             AND major_version = ip_major_version
+             AND minor_version = ip_minor_version
+             AND patch_version = ip_patch_version
+             AND deploy_type = ip_deployment_type
+             AND deploy_commit_hash = ip_deploy_commit_hash
+             AND deploy_status = c_deploy_status_complete
+        );
+
+   assert(l_deploy_count > 0, 'No completed deployment found for '
+                              ||ip_application_name||' '
+                              ||ip_major_version||'.'
+                              ||ip_minor_version||'.'
+                              ||ip_patch_version
+                              ||' commit '||ip_deploy_commit_hash);
+
+   assert(l_deploy_count = 1, 'Multiple completed deployments found for '
+                              ||ip_application_name||' '
+                              ||ip_major_version||'.'
+                              ||ip_minor_version||'.'
+                              ||ip_patch_version
+                              ||' commit '||ip_deploy_commit_hash
+                              ||'; provenance backfill is ambiguous');
+
+   SELECT application_name
+        , major_version
+        , minor_version
+        , patch_version
+        , pre_release
+        , build
+        , deploy_type
+        , deploy_status
+        , deploy_commit_hash
+        , deploy_begin
+        , deploy_end
+     INTO rec_application
+     FROM
+        (
+          SELECT application_name
+               , major_version
+               , minor_version
+               , patch_version
+               , pre_release
+               , build
+               , deploy_type
+               , deploy_status
+               , deploy_commit_hash
+               , deploy_begin
+               , deploy_end
+            FROM application
+           WHERE application_name = ip_application_name
+             AND major_version = ip_major_version
+             AND minor_version = ip_minor_version
+             AND patch_version = ip_patch_version
+             AND deploy_type = ip_deployment_type
+             AND deploy_commit_hash = ip_deploy_commit_hash
+             AND deploy_status = c_deploy_status_complete
+          UNION ALL
+          SELECT application_name
+               , major_version
+               , minor_version
+               , patch_version
+               , pre_release
+               , build
+               , deploy_type
+               , deploy_status
+               , deploy_commit_hash
+               , deploy_begin
+               , deploy_end
+            FROM app_deploy_hist
+           WHERE application_name = ip_application_name
+             AND major_version = ip_major_version
+             AND minor_version = ip_minor_version
+             AND patch_version = ip_patch_version
+             AND deploy_type = ip_deployment_type
+             AND deploy_commit_hash = ip_deploy_commit_hash
+             AND deploy_status = c_deploy_status_complete
+        );
+
+   record_deploy_provenance_p
+      ( ip_rec_application          => rec_application
+      , ip_artifact_uri             => ip_artifact_uri
+      , ip_artifact_checksum        => ip_artifact_checksum
+      , ip_artifact_checksum_alg    => ip_artifact_checksum_alg
+      , ip_artifact_file_name       => ip_artifact_file_name
+      , ip_artifact_repository_type => ip_artifact_repository_type
+      , ip_artifact_group_id        => ip_artifact_group_id
+      , ip_artifact_id              => ip_artifact_id
+      , ip_artifact_version         => ip_artifact_version
+      , ip_artifact_classifier      => ip_artifact_classifier
+      , ip_artifact_extension       => ip_artifact_extension
+      , ip_package_coordinate       => ip_package_coordinate
+      , ip_source_repository_url    => ip_source_repository_url
+      , ip_source_commit_hash       => ip_source_commit_hash
+      , ip_source_path              => ip_source_path
+      , ip_build_id                 => ip_build_id
+      , ip_build_url                => ip_build_url
+      , ip_build_time               => ip_build_time
+      , ip_build_metadata_json      => ip_build_metadata_json
+      , ip_replace_existing         => FALSE
+      );
+
+   COMMIT;
+END record_deployment_provenance_p;
 
 
 

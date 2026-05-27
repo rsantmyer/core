@@ -257,6 +257,32 @@ Tooling that wants a single API call can still call
 `pkg_application.begin_artifact_deployment_p`, which starts the deployment
 and records provenance together.
 
+When staged provenance was not possible, such as Core's initial bootstrap
+where `pkg_application` did not exist before `deploy.sql` ran, dbpm can
+backfill provenance after the deployment completes:
+
+```sql
+BEGIN
+    pkg_application.record_deployment_provenance_p(
+        ip_application_name      => 'CORE',
+        ip_major_version         => 3,
+        ip_minor_version         => 4,
+        ip_patch_version         => 0,
+        ip_deployment_type       => pkg_application.c_deploy_type_initial,
+        ip_deploy_commit_hash    => '&GIT_COMMIT_HASH',
+        ip_artifact_uri          => '&ARTIFACT_URI',
+        ip_artifact_checksum     => '&ARTIFACT_CHECKSUM',
+        ip_package_coordinate    => '&PACKAGE_COORDINATE'
+    );
+END;
+/
+```
+
+This backfill API requires exactly one matching completed deployment. It
+is idempotent when the same provenance has already been recorded, and it
+raises an assertion error if different provenance already exists for that
+deployment.
+
 Typical artifact provenance includes:
 - artifact URI or local path
 - artifact checksum and checksum algorithm

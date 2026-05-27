@@ -1,6 +1,6 @@
 package:
   name: core
-  version: "3.3.0"
+  version: "3.4.0"
   description: Oracle deployment metadata and lifecycle substrate
   vendor: rsantmyer
   license: Apache-2.0

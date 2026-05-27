@@ -330,6 +330,49 @@ AS
                               , ip_notes                     IN app_deploy_notes.notes%TYPE DEFAULT NULL
                               );
 /**
+ * @description Records artifact/build provenance for an already completed
+ * deployment. Use this for controlled backfill cases, such as Core bootstrap,
+ * when provenance could not be staged before begin_deployment_p ran. This does
+ * not create or update deployment status and does not consume pending provenance.
+ * @param ip_application_name Application whose completed deployment is being backfilled.
+ * @param ip_major_version Completed deployment major version.
+ * @param ip_minor_version Completed deployment minor version.
+ * @param ip_patch_version Completed deployment patch version.
+ * @param ip_deployment_type Completed deployment type.
+ * @param ip_deploy_commit_hash Completed deployment commit hash.
+ * @param ip_artifact_uri Resolved artifact URL, repository URL, or local path.
+ * @param ip_artifact_checksum Checksum of the exact artifact bytes deployed.
+ * @param ip_artifact_checksum_alg Checksum algorithm, such as SHA-256.
+ * @param ip_package_coordinate Resolved package coordinate from deployment tooling.
+ * @param ip_build_metadata_json Free-form build metadata captured as JSON text.
+ */
+   PROCEDURE record_deployment_provenance_p
+                              ( ip_application_name          IN application.application_name%TYPE
+                              , ip_major_version             IN application.major_version%TYPE
+                              , ip_minor_version             IN application.minor_version%TYPE
+                              , ip_patch_version             IN application.patch_version%TYPE
+                              , ip_deployment_type           IN application.deploy_type%TYPE DEFAULT c_deploy_type_initial
+                              , ip_deploy_commit_hash        IN application.deploy_commit_hash%TYPE DEFAULT c_deploy_commit_hash_unknown
+                              , ip_artifact_uri              IN app_deploy_provenance.artifact_uri%TYPE DEFAULT NULL
+                              , ip_artifact_checksum         IN app_deploy_provenance.artifact_checksum%TYPE DEFAULT NULL
+                              , ip_artifact_checksum_alg     IN app_deploy_provenance.artifact_checksum_alg%TYPE DEFAULT 'SHA-256'
+                              , ip_artifact_file_name        IN app_deploy_provenance.artifact_file_name%TYPE DEFAULT NULL
+                              , ip_artifact_repository_type  IN app_deploy_provenance.artifact_repository_type%TYPE DEFAULT NULL
+                              , ip_artifact_group_id         IN app_deploy_provenance.artifact_group_id%TYPE DEFAULT NULL
+                              , ip_artifact_id               IN app_deploy_provenance.artifact_id%TYPE DEFAULT NULL
+                              , ip_artifact_version          IN app_deploy_provenance.artifact_version%TYPE DEFAULT NULL
+                              , ip_artifact_classifier       IN app_deploy_provenance.artifact_classifier%TYPE DEFAULT NULL
+                              , ip_artifact_extension        IN app_deploy_provenance.artifact_extension%TYPE DEFAULT NULL
+                              , ip_package_coordinate        IN app_deploy_provenance.package_coordinate%TYPE DEFAULT NULL
+                              , ip_source_repository_url     IN app_deploy_provenance.source_repository_url%TYPE DEFAULT NULL
+                              , ip_source_commit_hash        IN app_deploy_provenance.source_commit_hash%TYPE DEFAULT NULL
+                              , ip_source_path               IN app_deploy_provenance.source_path%TYPE DEFAULT NULL
+                              , ip_build_id                  IN app_deploy_provenance.build_id%TYPE DEFAULT NULL
+                              , ip_build_url                 IN app_deploy_provenance.build_url%TYPE DEFAULT NULL
+                              , ip_build_time                IN app_deploy_provenance.build_time%TYPE DEFAULT NULL
+                              , ip_build_metadata_json       IN app_deploy_provenance.build_metadata_json%TYPE DEFAULT NULL
+                              );
+/**
  * @description Stores free-form deployment notes for the current deployment.
  * @param ip_application_name Application whose deployment notes should be updated.
  * @param ip_notes Notes to record.
