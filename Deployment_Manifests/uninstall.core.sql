@@ -11,7 +11,7 @@ PROMPT
 ACCEPT confirm CHAR PROMPT 'Type YES to proceed with uninstall, or anything else to abort: '
 
 BEGIN
-   IF UPPER('&confirm') != 'YES' THEN
+   IF UPPER(NVL('&confirm','NO')) != 'YES' THEN
       RAISE_APPLICATION_ERROR(-20000,'Uninstall aborted by user.');
    END IF;
 END;
